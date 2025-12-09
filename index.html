@@ -15,6 +15,7 @@
       --bg-dark: #0a0e27;
     }
 
+    /* Base Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -58,7 +59,17 @@
     .skip-link {
       position: absolute;
       left: -9999px;
-      top:focus { left: 1rem; top: 1rem; background: #fff; color: #000; padding: 0.5rem 1rem; border-radius: 6px; z-index: 9999; }
+      /* Corrected focus selector syntax */
+      top: 1rem; 
+      left: 1rem;
+      background: #fff;
+      color: #000;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      z-index: 9999;
+    }
+    .skip-link:focus {
+        left: 1rem; 
     }
 
     /* Navbar */
@@ -70,14 +81,15 @@
       border-bottom: 1px solid rgba(139, 92, 246, 0.2);
       z-index: 1000;
     }
-    nav {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+   nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
     .logo a {
       font-size: 1.4rem;
       font-weight: 800;
@@ -105,7 +117,7 @@
     .cta {
       background: linear-gradient(90deg, var(--primary), var(--secondary));
       color: white !important;
-      padding:  padding: 0.6rem 1.2rem;
+      padding: 0.6rem 1.2rem; /* Cleaned up padding repetition */
       border-radius: 8px;
       font-weight: 600;
       box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
@@ -238,21 +250,37 @@
       flex-wrap: wrap;
     }
     .social-link {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: rgba(139,92,246,0.15);
-      border: 2px solid var(--primary);
-      display: grid;
-      place-items: center;
-      font-size: 1.8rem;
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
       transition: all 0.4s;
+      background: rgba(139,92,246,0.15); /* Keep a subtle background */
     }
+
+    .social-link span {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px; 
+      line-height: 1; 
+    }
+    
     .social-link:hover {
-      transform: scale(1.25) rotate(10deg);
-      background: var(--primary);
-      box-shadow: 0 0 25px rgba(139,92,246,0.6);
+      transform: translateY(-4px); 
+      background: var(--primary); 
+      box-shadow: 0 10px 20px rgba(139,92,246,0.4);
     }
+
+    .social-link:hover svg {
+        fill: white;
+    }
+    .social-link svg {
+        fill: currentColor;
+    }
+
 
     /* Footer */
     footer {
@@ -285,9 +313,6 @@
 </head>
 <body>
 
-  <a href="#main" class="skip-link">Skip to main content</a>
-
-  <!-- Floating Orbs -->
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
 
@@ -352,10 +377,41 @@
       <div class="contact-card">
         <p>Have a project in mind or just want to chat? I'm always open to interesting conversations and collaborations.</p>
         <div class="social-links">
-          <a href="https://github.com/abdullah-x909" target="_blank" class="social-link" aria-label="GitHub">GitHub</a>
-          <a href="https://t.me/+q9nzotgEQ4xjMjE1" target="_blank" class="social-link" aria-label="Telegram">Telegram</a>
-          <a href="mailto:your@email.com" class="social-link" aria-label="Email">Email</a>
-          <a href="https://linkedin.com/in/yourprofile" target="_blank" class="social-link" aria-label="LinkedIn">LinkedIn</a>
+            <a href="https://github.com/abdullah-x909" target="_blank" class="social-link" aria-label="GitHub Profile">
+                GitHub 
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+                    </svg> 
+                </span>
+            </a>
+
+            <a href="https://t.me/+q9nzotgEQ4xjMjE1" target="_blank" class="social-link" aria-label="Message on Telegram">
+                Telegram
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16">
+                      <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0ZM8.28.94c-.58.34-.84.97-.68 1.63l.36 1.63c.24 1.07.72 1.99 1.36 2.7l.88-.86c.64-.64 1.56-1.12 2.63-1.36l1.63-.36c.66-.16 1.29.1 1.63.68c.34.58.1 1.29-.36 1.63l-1.63.36c-1.07.24-1.99.72-2.7 1.36l-.88.88c-.64.64-1.12 1.56-1.36 2.63l-.36 1.63c-.16.66.1 1.29.68 1.63.58.34 1.29.1 1.63-.36l.36-1.63c.24-1.07.72-1.99 1.36-2.7l.88-.88c.64-.64 1.56-1.12 2.63-1.36l1.63-.36c.66-.16 1.29.1 1.63.68.34.58.1 1.29-.36 1.63l-1.63.36c-1.07.24-1.99.72-2.7 1.36l-.88.88c-.64.64-1.12 1.56-1.36 2.63l-.36 1.63c-.16.66.1 1.29.68 1.63.58.34 1.29.1 1.63-.36L14 13.92c.46-.34.7-.97.54-1.63l-.36-1.63c-.24-1.07-.72-1.99-1.36-2.7l-.88.88c-.64.64-1.56 1.12-2.63 1.36l-1.63.36c-.66.16-1.29-.1-1.63-.68-.34-.58-.1-1.29.36-1.63l1.63-.36c1.07-.24 1.99-.72 2.7-1.36l.88-.88c.64-.64 1.12-1.56 1.36-2.63l.36-1.63c.16-.66-.1-1.29-.68-1.63-.58-.34-1.29-.1-1.63.36L2.08 2.08c-.46.34-.7.97-.54 1.63l.36 1.63c.24 1.07.72 1.99 1.36 2.7l.88-.88c.64-.64 1.56-1.12 2.63-1.36l1.63-.36c.66-.16 1.29.1 1.63.68zM6.55 1.58c.24-.05.48.04.64.24l1.1 1.1c.1.1.26.1.36 0l1.1-1.1c.16-.2.4-.29.64-.24l1.22.28c.17.04.3.17.34.34l.28 1.22c.05.24-.04.48-.24.64l-1.1 1.1c-.1.1-.1.26 0 .36l1.1 1.1c.2.16.29.4.24.64l-.28 1.22c-.04.17-.17.3-.34.34l-1.22.28c-.24.05-.48-.04-.64-.24l-1.1-1.1c-.1-.1-.26-.1-.36 0l-1.1 1.1c-.16.2-.4.29-.64.24l-1.22-.28c-.17-.04-.3-.17-.34-.34l-.28-1.22c-.05-.24.04-.48.24-.64l1.1-1.1c.1-.1.1-.26 0-.36l-1.1-1.1c-.2-.16-.29-.4-.24-.64l.28-1.22c.04-.17.17-.3.34-.34l1.22-.28z"/>
+                    </svg>
+                </span>
+            </a>
+
+            <a href="mailto:abdullarahat.ar@gmail.com" class="social-link" aria-label="Send Email">
+                Email
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16">
+                      <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.316a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.697l-7.234 4.352L0 4.697Z"/>
+                    </svg>
+                </span>
+            </a>
+
+            <a href="https://linkedin.com/in/abdullahrahat.ar" target="_blank" class="social-link" aria-label="LinkedIn Profile">
+                LinkedIn
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16">
+                      <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.247V9.752c0-.498.428-.691.68-.691.252 0 .695.193.695.691v3.64l.006.012h2.24V9.45c0-.987-.482-1.294-1.255-1.294-.773 0-1.255.307-1.255 1.294v.104l-.004-.002h-.104c-.773 0-1.255-.307-1.255-1.294v4.545l.004.004-.004.004H4.943zm-2.585-8.08c0 1.056.883 1.916 1.968 1.916 1.085 0 1.968-.86 1.968-1.916 0-1.056-.883-1.916-1.968-1.916-1.085 0-1.968.86-1.968 1.916zm.106 5.86h2.24v-7.8h-2.24v7.8z"/>
+                    </svg>
+                </span>
+            </a>
         </div>
       </div>
     </section>
@@ -363,8 +419,8 @@
   </main>
 
   <footer>
-    <p>© 2025 Abdullah • Built with passion & code</p>
-    <p><a href="https://github.com/abdullah-x909" target="_blank">github.com/abdullah-x909</a></p>
+    <p>© 2025 Abdullah • Built with ❤️</p>
+    <p><a href="https://github.com/abdullah-x909" target="_blank">Invited on Github</a></p>
   </footer>
 
   <script>
