@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
+backend:
+  name: github
+  repo: abdullah-x909/abdullah-x909.github.io
+  branch: main  
+
+media_folder: /files  
+public_folder: /files
+
+collections:
+  - name: notes
+    label: Notes/Messages
+    folder: /notes
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"  
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Date, name: date, widget: datetime }  
+      - { label: Message, name: body, widget: markdown } 
+      - { label: Attach File (optional), name: attachment, widget: file, required: false } 
