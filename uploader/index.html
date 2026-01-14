@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Upload to repo</title>
+</head>
+<body>
+  <h1>Upload message or file</h1>
+  <form id="uploadForm">
+    <label>
+      Name (optional):
+      <input type="text" name="name" />
+    </label>
+    <br/>
+    <label>
+      Message:
+      <textarea name="message" rows="4" cols="40"></textarea>
+    </label>
+    <br/>
+    <label>
+      File (optional):
+      <input type="file" name="file" />
+    </label>
+    <br/>
+    <button type="submit">Upload</button>
+  </form>
+
+  <div id="status"></div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = 'Uploading...';
+      const fd = new FormData(form);
+      try {
+        // Adjust the URL to point to your server endpoint (see server/README.md)
+        const resp = await fetch('https://YOUR_SERVER_DOMAIN_OR_NGROK/upload', {
+          method: 'POST',
+          body: fd
+        });
+        const json = await resp.json();
+        if (!resp.ok) throw json;
+        status.innerHTML = 'Uploaded!<br/>Commit: ' + (json.commitUrl || json.file && json.file.path || json.metaPath || 'unknown');
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Upload failed: ' + (err && err.message ? err.message : JSON.stringify(err));
+      }
+    });
+  </script>
+</body>
+</html>
