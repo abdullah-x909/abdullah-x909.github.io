@@ -26,6 +26,9 @@
 <!-- Mermaid -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
 
+<!-- html2canvas (export helpers) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 <!-- FileSaver + html-docx -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
@@ -76,6 +79,10 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
   color:var(--text);font-size:10px;font-family:var(--ui);white-space:nowrap;
   padding:3px 7px;border-radius:5px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;}
 .b:hover::after{opacity:1;}
+.b:focus::after,.b:active::after{opacity:0;}
+@media (hover:none){
+  .b::after{display:none;}
+}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0;}
 .xb{height:27px;padding:0 11px;border:none;border-radius:6px;cursor:pointer;
   font-family:var(--ui);font-size:11px;font-weight:700;
@@ -132,6 +139,7 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
   cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
   font-size:13px;transition:all .12s;}
 .sbi:hover{background:var(--aglow);color:var(--accent);}
+#sbtg{font-size:14px}
 #fsrch{margin:6px 8px;padding:5px 9px;background:var(--panel);
   border:1px solid var(--border);border-radius:5px;color:var(--text);
   font-family:var(--ui);font-size:12px;outline:none;width:calc(100% - 16px);}
@@ -393,6 +401,7 @@ body.focus #stb{display:none;}
     <div class="sbh">
       Files
       <div class="sbhb">
+        <button class="sbi" id="sbtg" onclick="toggleSidebar()" title="Hide sidebar">❮</button>
         <button class="sbi" onclick="newFile()" title="New">+</button>
         <button class="sbi" onclick="importFile()" title="Import .md">↑</button>
       </div>
@@ -518,7 +527,7 @@ const lns=document.getElementById('lns');
 let rt=null;
 function render(){ clearTimeout(rt); rt=setTimeout(_render,80); }
 
-function _render(){
+async function _render(){
   const md=ed.value;
   pv.innerHTML=marked.parse(md);
 
@@ -538,7 +547,9 @@ function _render(){
   else window._pendingRender=doKatex;
 
   // Mermaid
-  mermaid.run({nodes:pv.querySelectorAll('.mermaid')});
+  try{
+    await mermaid.run({nodes:pv.querySelectorAll('.mermaid')});
+  }catch(_e){}
 
   updateStat(md); updateTOC(); updateLN();
   schedSave();
@@ -776,7 +787,7 @@ document.getElementById('fq').addEventListener('keydown',e=>{ if(e.key==='Enter'
 
 /* ════ EXPORTS ══════════════════════════════════ */
 function fname(){ const f=files.find(f=>f.id===aid); return (f?f.name:'document').replace('.md',''); }
-function buildHTML(){
+function buildHTML(bodyHTML, extraCSS=''){
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
 <style>
@@ -791,23 +802,105 @@ td{padding:7px 12px;border:1px solid #e5e7eb;}tr:nth-child(even) td{background:#
 a{color:#4f46e5;}mark{background:#fef08a;}img{max-width:100%;}
 .footnotes{border-top:1px solid #e5e7eb;margin-top:2em;padding-top:1em;font-size:.9em;color:#555;}
 .katex-display{overflow-x:auto;} .mermaid{text-align:center;}
-</style></head><body>${pv.innerHTML}</body></html>`;
+</style>
+${extraCSS?`<style>${extraCSS}</style>`:''}
+</head><body>${bodyHTML}</body></html>`;
 }
 
-function exportWord(){
+function setSidebarHidden(h){
+  const sb=document.getElementById('sb');
+  sb.classList.toggle('hide',!!h);
+  const b=document.getElementById('sbtg');
+  if(b){
+    b.textContent=h?'❯':'❮';
+    b.title=h?'Show sidebar':'Hide sidebar';
+  }
+  localStorage.setItem('mf2_sb',h?'1':'0');
+}
+function toggleSidebar(){
+  const sb=document.getElementById('sb');
+  setSidebarHidden(!sb.classList.contains('hide'));
+}
+
+async function ensureRenderedForExport(){
+  clearTimeout(rt);
+  await _render();
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+}
+
+function clonePreviewNode(){
+  const wrap=document.createElement('div');
+  wrap.innerHTML=pv.innerHTML;
+  return wrap;
+}
+
+function svgToDataUrl(svgEl){
+  const clone=svgEl.cloneNode(true);
+  if(!clone.getAttribute('xmlns')) clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const xml=new XMLSerializer().serializeToString(clone);
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+}
+
+async function elementToPngDataUrl(el, scale=2){
+  if(!window.html2canvas) throw new Error('html2canvas not available');
+  const canvas=await html2canvas(el,{backgroundColor:null,scale,logging:false,useCORS:true});
+  return canvas.toDataURL('image/png');
+}
+
+async function inlineExportImages(container){
+  const svgs=[...container.querySelectorAll('svg')];
+  for(const svg of svgs){
+    const img=document.createElement('img');
+    img.src=svgToDataUrl(svg);
+    img.style.maxWidth='100%';
+    svg.replaceWith(img);
+  }
+
+  const katexNodes=[...container.querySelectorAll('.katex, .katex-display')];
+  if(katexNodes.length && window.html2canvas){
+    const host=document.createElement('div');
+    host.style.cssText='position:fixed;left:-10000px;top:0;max-width:750px;background:#fff;color:#111;z-index:-1;';
+    document.body.appendChild(host);
+    try{
+      for(const node of katexNodes){
+        const live=node.cloneNode(true);
+        host.appendChild(live);
+        const dataUrl=await elementToPngDataUrl(live,2);
+        const img=document.createElement('img');
+        img.src=dataUrl;
+        img.style.maxWidth='100%';
+        img.style.verticalAlign='middle';
+        node.replaceWith(img);
+        live.remove();
+      }
+    }finally{
+      host.remove();
+    }
+  }
+}
+
+async function exportWord(){
   try{
-    const blob=htmlDocx.asBlob(buildHTML(),{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
+    await ensureRenderedForExport();
+    const node=clonePreviewNode();
+    await inlineExportImages(node);
+    const blob=htmlDocx.asBlob(buildHTML(node.innerHTML),{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
     saveAs(blob,fname()+'.docx'); toast('Exported: '+fname()+'.docx','ok');
   }catch(e){ toast('Export failed: '+e.message,'err'); }
 }
-function exportPDF(){
+async function exportPDF(){
+  await ensureRenderedForExport();
   const w=window.open('','_blank','width=950,height=750');
-  w.document.write(buildHTML()); w.document.close();
-  w.onload=()=>w.print();
+  w.document.write(buildHTML(pv.innerHTML,`@page{margin:14mm;} svg{max-width:100%;}`));
+  w.document.close();
+  w.onload=async ()=>{
+    try{ await w.document.fonts.ready; }catch(_e){}
+    setTimeout(()=>w.print(),120);
+  };
   toast('Print dialog → Save as PDF…','info');
 }
 function exportHTML(){
-  saveAs(new Blob([buildHTML()],{type:'text/html'}),fname()+'.html');
+  saveAs(new Blob([buildHTML(pv.innerHTML)],{type:'text/html'}),fname()+'.html');
   toast('Exported: '+fname()+'.html','ok');
 }
 function exportMD(){
@@ -857,7 +950,7 @@ ed.addEventListener('keydown',e=>{
   if(c&&e.key==='d'){e.preventDefault();exportWord();}
   if(c&&e.key==='p'){e.preventDefault();exportPDF();}
   if(c&&e.key==='f'){e.preventDefault();openFind();}
-  if(c&&e.key==='\\'){e.preventDefault();document.getElementById('sb').classList.toggle('hide');}
+  if(c&&e.key==='\\'){e.preventDefault();toggleSidebar();}
   if(c&&e.key==='1'){e.preventDefault();setView('edit-only');}
   if(c&&e.key==='2'){e.preventDefault();setView('split');}
   if(c&&e.key==='3'){e.preventDefault();setView('prev-only');}
@@ -865,6 +958,12 @@ ed.addEventListener('keydown',e=>{
   if(e.altKey&&e.key==='z'){e.preventDefault();toggleWrap();}
   if(e.key==='Tab'){e.preventDefault();ins('  ');}
 });
+
+// Prevent “stuck” hover tooltips after clicks / dialogs (common on some browsers)
+document.addEventListener('pointerdown',()=>{
+  const a=document.activeElement;
+  if(a && a.blur) a.blur();
+},{capture:true});
 document.getElementById('nname').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmNew(); if(e.key==='Escape') closeM('mnew'); });
 
 /* ════ MODAL ════════════════════════════════════ */
@@ -888,7 +987,6 @@ mermaid.initialize({startOnLoad:false,theme:'dark',
 function DEMO(){ return `# MarkFlow v2 ✦ Power Markdown Editor
 
 > A **Top grade** open source editor — LaTeX, Mermaid, TOC, footnotes, find & replace, multi-format export and more. Built with ❤ by \`Abdullah Rahat\` .
-
 ---
 
 ## ∑ LaTeX Math (KaTeX)
@@ -925,7 +1023,7 @@ graph TD
 
 ## 📋 Feature Comparison
 
-| Feature               | MarkFlow v2 | MarkFlow v1 |
+| Feature               | MarkFlow v2 |  MarkFlow v1 |
 |-----------------------|:-----------:|:---------:|
 | Live Preview          | ✅          | ✅        |
 | LaTeX / KaTeX         | ✅          | ✅        |
@@ -1012,7 +1110,7 @@ const render = debounce(() => {
 *Shortcuts: **Ctrl+F** search • **Ctrl+D** Word export • **F11** focus • **≡ TOC** in toolbar*
 
 [^1]: Footnotes render automatically at the bottom using **marked-footnote** extension.
-`; }
+`
 
 /* ════ INIT ═════════════════════════════════════ */
 (function init(){
@@ -1020,6 +1118,7 @@ const render = debounce(() => {
   const f=files.find(f=>f.id===aid);
   if(f){ ed.value=f.content; document.getElementById('stf').textContent=f.name; }
   document.getElementById('bwrp').classList.add('on'); // word wrap on by default
+  setSidebarHidden(localStorage.getItem('mf2_sb')==='1');
   render();
   renderFL();
   updateStat();
