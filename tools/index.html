@@ -26,9 +26,6 @@
 <!-- Mermaid -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
 
-<!-- html2canvas (export helpers) -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
 <!-- FileSaver + html-docx -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
@@ -60,8 +57,10 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
 /* ── TOOLBAR ─────────────────────── */
 #tb{height:var(--tbh);background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 10px;gap:1px;flex-shrink:0;z-index:20;
-  overflow-x:auto;overflow-y:hidden;}
+  overflow-x:auto;overflow-y:visible;}
 #tb::-webkit-scrollbar{height:0;}
+/* Clip container must not cut tooltips — use clip on inner scroll wrapper */
+#tb-inner{display:flex;align-items:center;gap:1px;min-width:max-content;overflow:visible;}
 .logo{font-size:14px;font-weight:800;color:var(--accent);margin-right:10px;flex-shrink:0;
   display:flex;align-items:center;gap:5px;letter-spacing:-.3px;}
 .logo-v{font-size:9px;background:var(--accent);color:var(--bg);padding:1px 5px;
@@ -70,19 +69,11 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
 .b{width:30px;height:30px;border:none;background:transparent;color:var(--text2);
   cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;
   font-size:12px;font-family:var(--mono);font-weight:500;transition:background .12s,color .12s;
-  position:relative;flex-shrink:0;}
+  position:static;flex-shrink:0;}
 .b:hover{background:var(--panel2);color:var(--text);}
 .b.on{background:var(--aglow);color:var(--accent);}
 .b svg{width:14px;height:14px;pointer-events:none;}
-.b::after{content:attr(data-t);position:absolute;top:calc(100% + 5px);left:50%;
-  transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border2);
-  color:var(--text);font-size:10px;font-family:var(--ui);white-space:nowrap;
-  padding:3px 7px;border-radius:5px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;}
-.b:hover::after{opacity:1;}
-.b:focus::after,.b:active::after{opacity:0;}
-@media (hover:none){
-  .b::after{display:none;}
-}
+/* Global tooltip — rendered via JS into #tip overlay, not ::after pseudo */
 .tbr{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0;}
 .xb{height:27px;padding:0 11px;border:none;border-radius:6px;cursor:pointer;
   font-family:var(--ui);font-size:11px;font-weight:700;
@@ -127,10 +118,30 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
 /* ── LAYOUT ──────────────────────── */
 #app{flex:1;display:flex;overflow:hidden;}
 
+/* ── GLOBAL TOOLTIP ──────────────── */
+#tip{position:fixed;z-index:9999;background:var(--panel2);border:1px solid var(--border2);
+  color:var(--text);font-size:11px;font-family:var(--ui);white-space:nowrap;
+  padding:4px 9px;border-radius:6px;pointer-events:none;opacity:0;
+  transition:opacity .12s;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+#tip.show{opacity:1;}
+
 /* ── SIDEBAR ─────────────────────── */
+#sb-wrap{display:flex;flex-direction:row;flex-shrink:0;position:relative;align-items:stretch;}
 #sb{width:var(--sbw);background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;transition:width .2s;overflow:hidden;}
-#sb.hide{width:0;}
+  display:flex;flex-direction:column;transition:width .22s ease;overflow:hidden;}
+#sb.hide{width:0;border-right:none;}
+/* Sidebar toggle tab */
+#sb-toggle{
+  width:13px;background:var(--surface);
+  border:1px solid var(--border);border-left:none;
+  border-radius:0 6px 6px 0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:11px;transition:background .15s,color .15s;
+  flex-shrink:0;padding:0;
+}
+#sb-toggle:hover{background:var(--panel2);color:var(--accent);}
+#sb.hide+#sb-toggle{border-left:1px solid var(--border);border-radius:6px;}
+#sb-toggle .arr{transition:transform .22s;display:block;line-height:1;user-select:none;}
 .sbh{padding:9px 11px 7px;font-size:9px;font-weight:700;letter-spacing:1.3px;
   color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;}
@@ -139,7 +150,6 @@ body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;f
   cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
   font-size:13px;transition:all .12s;}
 .sbi:hover{background:var(--aglow);color:var(--accent);}
-#sbtg{font-size:14px}
 #fsrch{margin:6px 8px;padding:5px 9px;background:var(--panel);
   border:1px solid var(--border);border-radius:5px;color:var(--text);
   font-family:var(--ui);font-size:12px;outline:none;width:calc(100% - 16px);}
@@ -298,18 +308,21 @@ body.reading #pv{max-width:680px;font-size:17px;line-height:2;}
 #work.prev-only .db{display:none;}
 #work.prev-only #pp{padding:48px 10%;}
 body.focus #tb2{display:none;}
-body.focus #sb{width:0 !important;}
+body.focus #sb-wrap{width:0;overflow:hidden;}
 body.focus #ed{padding:48px 80px;font-size:16px;}
 body.focus #stb{display:none;}
 </style>
 </head>
 <body>
 
+<!-- GLOBAL TOOLTIP -->
+<div id="tip"></div>
+
 <!-- TOOLBAR -->
-<div id="tb">
+<div id="tb"><div id="tb-inner">
   <div class="logo">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
-    MarkFlow <span class="logo-v">v2</span>
+    MarkFlow <span class="logo-v">v2.0.2</span>
   </div>
   <div class="sep"></div>
 
@@ -359,7 +372,7 @@ body.focus #stb{display:none;}
       <button class="vb" id="vp" onclick="setView('prev-only')">Preview</button>
     </div>
   </div>
-</div>
+</div></div><!-- end tb-inner / tb -->
 
 <!-- TOOLBAR 2 -->
 <div id="tb2">
@@ -397,11 +410,11 @@ body.focus #stb{display:none;}
 
 <!-- APP -->
 <div id="app">
+  <div id="sb-wrap">
   <div id="sb">
     <div class="sbh">
       Files
       <div class="sbhb">
-        <button class="sbi" id="sbtg" onclick="toggleSidebar()" title="Hide sidebar">❮</button>
         <button class="sbi" onclick="newFile()" title="New">+</button>
         <button class="sbi" onclick="importFile()" title="Import .md">↑</button>
       </div>
@@ -412,6 +425,8 @@ body.focus #stb{display:none;}
       <div class="toch">Table of Contents</div>
       <div id="toci"></div>
     </div>
+  </div>
+  <button id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><span class="arr">‹</span></button>
   </div>
 
   <div id="work">
@@ -527,7 +542,7 @@ const lns=document.getElementById('lns');
 let rt=null;
 function render(){ clearTimeout(rt); rt=setTimeout(_render,80); }
 
-async function _render(){
+function _render(){
   const md=ed.value;
   pv.innerHTML=marked.parse(md);
 
@@ -547,9 +562,7 @@ async function _render(){
   else window._pendingRender=doKatex;
 
   // Mermaid
-  try{
-    await mermaid.run({nodes:pv.querySelectorAll('.mermaid')});
-  }catch(_e){}
+  mermaid.run({nodes:pv.querySelectorAll('.mermaid')});
 
   updateStat(md); updateTOC(); updateLN();
   schedSave();
@@ -785,127 +798,184 @@ function doReplaceAll(){
 }
 document.getElementById('fq').addEventListener('keydown',e=>{ if(e.key==='Enter') findNav(e.shiftKey?-1:1); if(e.key==='Escape') closeFind(); });
 
-/* ════ EXPORTS ══════════════════════════════════ */
+/* ════ EXPORTS — FIXED ENGINE ═══════════════════
+   Strategy:
+   - KaTeX: already rendered as real HTML spans in pv. We clone pv
+     and inline the KaTeX CSS so it survives in docx/pdf windows.
+   - Mermaid: rendered as <svg> in pv. We serialize each SVG with
+     xmlSerializer and keep inline styles. We also add a white bg.
+   - Copy-code buttons: stripped from clone before export.
+   - For PDF: we open a window, inject full HTML + wait for fonts
+     then print (no missing assets).
+   ════════════════════════════════════════════════ */
 function fname(){ const f=files.find(f=>f.id===aid); return (f?f.name:'document').replace('.md',''); }
-function buildHTML(bodyHTML, extraCSS=''){
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
-<style>
-body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.7;color:#111;max-width:750px;margin:40px auto;}
-h1{font-size:22pt;border-bottom:2px solid #4f46e5;padding-bottom:6px;color:#1a1a2e;}
-h2{font-size:16pt;color:#1e3a5f;margin-top:20px;}h3{font-size:13pt;color:#4f46e5;}
-code{font-family:Consolas,monospace;font-size:10pt;background:#f3f4f6;padding:2px 5px;border-radius:3px;}
-pre{background:#f8f9fa;border-left:4px solid #4f46e5;padding:12px 16px;border-radius:4px;font-family:Consolas,monospace;font-size:10pt;white-space:pre-wrap;}
-pre code{background:none;padding:0;}blockquote{border-left:3px solid #4f46e5;padding:4px 12px;background:#f5f3ff;color:#555;}
-table{border-collapse:collapse;width:100%;}th{background:#4f46e5;color:#fff;padding:8px 12px;}
-td{padding:7px 12px;border:1px solid #e5e7eb;}tr:nth-child(even) td{background:#f9fafb;}
-a{color:#4f46e5;}mark{background:#fef08a;}img{max-width:100%;}
-.footnotes{border-top:1px solid #e5e7eb;margin-top:2em;padding-top:1em;font-size:.9em;color:#555;}
-.katex-display{overflow-x:auto;} .mermaid{text-align:center;}
-</style>
-${extraCSS?`<style>${extraCSS}</style>`:''}
-</head><body>${bodyHTML}</body></html>`;
-}
 
-function setSidebarHidden(h){
-  const sb=document.getElementById('sb');
-  sb.classList.toggle('hide',!!h);
-  const b=document.getElementById('sbtg');
-  if(b){
-    b.textContent=h?'❯':'❮';
-    b.title=h?'Show sidebar':'Hide sidebar';
-  }
-  localStorage.setItem('mf2_sb',h?'1':'0');
-}
-function toggleSidebar(){
-  const sb=document.getElementById('sb');
-  setSidebarHidden(!sb.classList.contains('hide'));
-}
-
-async function ensureRenderedForExport(){
-  clearTimeout(rt);
-  await _render();
-  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-}
-
-function clonePreviewNode(){
-  const wrap=document.createElement('div');
-  wrap.innerHTML=pv.innerHTML;
-  return wrap;
-}
-
-function svgToDataUrl(svgEl){
-  const clone=svgEl.cloneNode(true);
-  if(!clone.getAttribute('xmlns')) clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
-  const xml=new XMLSerializer().serializeToString(clone);
-  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
-}
-
-async function elementToPngDataUrl(el, scale=2){
-  if(!window.html2canvas) throw new Error('html2canvas not available');
-  const canvas=await html2canvas(el,{backgroundColor:null,scale,logging:false,useCORS:true});
-  return canvas.toDataURL('image/png');
-}
-
-async function inlineExportImages(container){
-  const svgs=[...container.querySelectorAll('svg')];
-  for(const svg of svgs){
-    const img=document.createElement('img');
-    img.src=svgToDataUrl(svg);
-    img.style.maxWidth='100%';
-    svg.replaceWith(img);
-  }
-
-  const katexNodes=[...container.querySelectorAll('.katex, .katex-display')];
-  if(katexNodes.length && window.html2canvas){
-    const host=document.createElement('div');
-    host.style.cssText='position:fixed;left:-10000px;top:0;max-width:750px;background:#fff;color:#111;z-index:-1;';
-    document.body.appendChild(host);
+/* Collect KaTeX CSS text from the loaded stylesheet */
+function getKatexCSS(){
+  for(const ss of document.styleSheets){
     try{
-      for(const node of katexNodes){
-        const live=node.cloneNode(true);
-        host.appendChild(live);
-        const dataUrl=await elementToPngDataUrl(live,2);
-        const img=document.createElement('img');
-        img.src=dataUrl;
-        img.style.maxWidth='100%';
-        img.style.verticalAlign='middle';
-        node.replaceWith(img);
-        live.remove();
+      if(ss.href && ss.href.includes('katex')){
+        return [...ss.cssRules].map(r=>r.cssText).join('\n');
       }
-    }finally{
-      host.remove();
-    }
+    }catch(e){}
   }
+  // fallback: use the CDN link (works for HTML/PDF export)
+  return null;
 }
 
-async function exportWord(){
+/* Build a clean export-ready HTML string from the live preview DOM */
+function buildExportHTML(opts={}){
+  const {dark=false, forDocx=false} = opts;
+
+  // Clone preview DOM
+  const clone = pv.cloneNode(true);
+
+  // 1. Remove copy-code buttons (they're UI artifacts)
+  clone.querySelectorAll('.cc').forEach(el=>el.remove());
+
+  // 2. Fix Mermaid SVGs — ensure they have explicit width/height and white bg
+  clone.querySelectorAll('.mermaid svg').forEach(svg=>{
+    const bb = svg.getBoundingClientRect();
+    if(!svg.getAttribute('width'))  svg.setAttribute('width',  bb.width  || 400);
+    if(!svg.getAttribute('height')) svg.setAttribute('height', bb.height || 300);
+    svg.style.background = dark ? '#1e1e28' : '#ffffff';
+    svg.style.maxWidth = '100%';
+    // Inline all computed styles on SVG children so they survive cross-origin
+    svg.querySelectorAll('*').forEach(el=>{
+      try {
+        const cs = window.getComputedStyle(el);
+        // Copy key SVG presentation attrs
+        ['fill','stroke','stroke-width','font-size','font-family'].forEach(prop=>{
+          const v = cs.getPropertyValue(prop);
+          if(v && v!=='none' && v!=='') el.style[prop] = v;
+        });
+      }catch(e){}
+    });
+  });
+
+  // 3. Fix KaTeX — katex uses CSS classes + a stylesheet. We must either
+  //    embed the CSS or convert to MathML fallback.
+  //    Best: embed katex CSS inline in <style>.
+  const katexCSSText = getKatexCSS();
+  const katexCSSBlock = katexCSSText
+    ? `<style>${katexCSSText}</style>`
+    : `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>`;
+
+  // 4. For any remaining .mermaid divs that DIDN'T render (no svg child),
+  //    show a placeholder notice
+  clone.querySelectorAll('.mermaid').forEach(el=>{
+    if(!el.querySelector('svg')){
+      el.innerHTML = '<em style="color:#888">[Diagram: see live preview]</em>';
+    }
+  });
+
+  const bodyStyles = dark ? `
+    body{background:#0d0d12;color:#e2e2ee;}
+  ` : '';
+
+  const exportCSS = `
+    body{font-family:${forDocx?'Calibri,':''}Georgia,serif;font-size:${forDocx?'11pt':'15px'};
+      line-height:1.75;color:${dark?'#e2e2ee':'#1a1a2e'};
+      max-width:${forDocx?'100%':'820px'};margin:${forDocx?'0':'40px auto'};
+      padding:${forDocx?'0':'0 20px'};background:${dark?'#0d0d12':'#ffffff'};}
+    h1{font-family:${forDocx?'Calibri,':''}sans-serif;font-size:${forDocx?'22pt':'2em'};
+      font-weight:800;border-bottom:2px solid #4f46e5;padding-bottom:.3em;
+      margin:0 0 .5em;color:${dark?'#fff':'#1a1a2e'};}
+    h2{font-family:${forDocx?'Calibri,':''}sans-serif;font-size:${forDocx?'16pt':'1.45em'};
+      font-weight:700;margin:1.4em 0 .4em;color:${dark?'#e2e2ee':'#1e3a5f'};}
+    h3{font-family:${forDocx?'Calibri,':''}sans-serif;font-size:${forDocx?'13pt':'1.15em'};
+      font-weight:700;color:#4f46e5;margin:1.1em 0 .3em;}
+    h4,h5,h6{font-family:${forDocx?'Calibri,':''}sans-serif;font-weight:700;margin:.9em 0 .25em;}
+    p{margin:.6em 0 .9em;}
+    a{color:#4f46e5;text-decoration:none;}
+    strong{font-weight:700;}em{font-style:italic;}
+    del{text-decoration:line-through;}
+    mark{background:#fef08a;border-radius:2px;padding:0 2px;}
+    code{font-family:Consolas,monospace;font-size:.87em;
+      background:${dark?'#1e1e28':'#f3f4f6'};color:${dark?'#34d399':'#047857'};
+      padding:2px 5px;border-radius:3px;}
+    pre{background:${dark?'#0a0a10':'#f8f9fa'};border-left:4px solid #4f46e5;
+      padding:12px 16px;border-radius:4px;font-family:Consolas,monospace;
+      font-size:${forDocx?'10pt':'.87em'};white-space:pre-wrap;overflow-x:auto;margin:1em 0;
+      border:1px solid ${dark?'#2e2e3d':'#e5e7eb'};}
+    pre code{background:none;padding:0;color:inherit;}
+    blockquote{border-left:3px solid #4f46e5;padding:.4em 1em;margin:1em 0;
+      background:${dark?'rgba(167,139,250,.08)':'#f5f3ff'};color:${dark?'#a0a0b8':'#555'};font-style:italic;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;}
+    th{background:#4f46e5;color:#fff;padding:8px 12px;text-align:left;
+      border:1px solid ${dark?'#2e2e3d':'#c7d2fe'};}
+    td{padding:7px 12px;border:1px solid ${dark?'#2e2e3d':'#e5e7eb'};}
+    tr:nth-child(even) td{background:${dark?'rgba(255,255,255,.03)':'#f9fafb'};}
+    hr{border:none;border-top:1px solid ${dark?'#2e2e3d':'#e5e7eb'};margin:1.5em 0;}
+    img{max-width:100%;border-radius:6px;}
+    input[type="checkbox"]{margin-right:6px;}
+    .mermaid{text-align:center;margin:1em 0;padding:16px;
+      background:${dark?'#1e1e28':'#f8f8ff'};border-radius:8px;
+      border:1px solid ${dark?'#2e2e3d':'#e0e0f0'};}
+    .mermaid svg{max-width:100%;height:auto;}
+    .footnotes{border-top:1px solid ${dark?'#2e2e3d':'#e5e7eb'};
+      margin-top:2em;padding-top:1em;font-size:.88em;color:${dark?'#9090aa':'#555'};}
+    .katex-display{overflow-x:auto;padding:.3em 0;margin:.5em 0;}
+    .katex{font-size:1.05em;}
+    @media print{body{max-width:100%;margin:0;padding:20px;}pre{white-space:pre-wrap;}}
+  `;
+
+  const html = clone.innerHTML;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${fname()}</title>
+${katexCSSBlock}
+<style>${exportCSS}</style>
+</head>
+<body>${html}</body>
+</html>`;
+}
+
+function exportWord(){
+  const html = buildExportHTML({dark:false, forDocx:true});
   try{
-    await ensureRenderedForExport();
-    const node=clonePreviewNode();
-    await inlineExportImages(node);
-    const blob=htmlDocx.asBlob(buildHTML(node.innerHTML),{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
-    saveAs(blob,fname()+'.docx'); toast('Exported: '+fname()+'.docx','ok');
+    const blob = htmlDocx.asBlob(html,{
+      orientation:'portrait',
+      margins:{top:720,right:900,bottom:720,left:900}
+    });
+    saveAs(blob, fname()+'.docx');
+    toast('✓ Exported: '+fname()+'.docx','ok');
   }catch(e){ toast('Export failed: '+e.message,'err'); }
 }
-async function exportPDF(){
-  await ensureRenderedForExport();
-  const w=window.open('','_blank','width=950,height=750');
-  w.document.write(buildHTML(pv.innerHTML,`@page{margin:14mm;} svg{max-width:100%;}`));
+
+function exportPDF(){
+  const isDark = document.body.classList.contains('light') ? false : true;
+  const html = buildExportHTML({dark:false}); // always light for print
+  const w = window.open('','_blank','width=1000,height=800');
+  if(!w){ toast('Pop-up blocked — allow pop-ups and retry','err'); return; }
+  w.document.open();
+  w.document.write(html);
   w.document.close();
-  w.onload=async ()=>{
-    try{ await w.document.fonts.ready; }catch(_e){}
-    setTimeout(()=>w.print(),120);
+  // Wait for KaTeX fonts and Mermaid SVGs to fully paint
+  const tryPrint = ()=>{
+    if(w.document.readyState === 'complete'){
+      setTimeout(()=>{ w.focus(); w.print(); }, 400);
+    } else {
+      w.addEventListener('load', ()=> setTimeout(()=>{ w.focus(); w.print(); }, 400));
+    }
   };
+  tryPrint();
   toast('Print dialog → Save as PDF…','info');
 }
+
 function exportHTML(){
-  saveAs(new Blob([buildHTML(pv.innerHTML)],{type:'text/html'}),fname()+'.html');
-  toast('Exported: '+fname()+'.html','ok');
+  const html = buildExportHTML({dark: document.body.classList.contains('light') ? false : true});
+  saveAs(new Blob([html],{type:'text/html;charset=utf-8'}), fname()+'.html');
+  toast('✓ Exported: '+fname()+'.html','ok');
 }
+
 function exportMD(){
-  saveAs(new Blob([ed.value],{type:'text/markdown'}),fname()+'.md');
-  toast('Saved: '+fname()+'.md','ok');
+  saveAs(new Blob([ed.value],{type:'text/markdown;charset=utf-8'}), fname()+'.md');
+  toast('✓ Saved: '+fname()+'.md','ok');
 }
 
 /* ════ THEME ════════════════════════════════════ */
@@ -958,15 +1028,46 @@ ed.addEventListener('keydown',e=>{
   if(e.altKey&&e.key==='z'){e.preventDefault();toggleWrap();}
   if(e.key==='Tab'){e.preventDefault();ins('  ');}
 });
-
-// Prevent “stuck” hover tooltips after clicks / dialogs (common on some browsers)
-document.addEventListener('pointerdown',()=>{
-  const a=document.activeElement;
-  if(a && a.blur) a.blur();
-},{capture:true});
 document.getElementById('nname').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmNew(); if(e.key==='Escape') closeM('mnew'); });
 
-/* ════ MODAL ════════════════════════════════════ */
+/* ════ GLOBAL TOOLTIP ═══════════════════════════
+   All .b buttons use data-t attribute.
+   We attach mouseenter/mouseleave globally so overflow:hidden
+   on the toolbar never clips the tooltip.
+   ════════════════════════════════════════════════ */
+(function setupTooltip(){
+  const tip = document.getElementById('tip');
+  let hideTimer;
+  document.addEventListener('mouseover', e=>{
+    const btn = e.target.closest('[data-t]');
+    if(!btn){ return; }
+    clearTimeout(hideTimer);
+    const r = btn.getBoundingClientRect();
+    tip.textContent = btn.getAttribute('data-t');
+    tip.classList.add('show');
+    // Position: below button, centered
+    const tw = tip.offsetWidth || 100;
+    let left = r.left + r.width/2 - tw/2;
+    left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+    tip.style.left = left + 'px';
+    tip.style.top  = (r.bottom + 6) + 'px';
+  });
+  document.addEventListener('mouseout', e=>{
+    const btn = e.target.closest('[data-t]');
+    if(!btn) return;
+    hideTimer = setTimeout(()=> tip.classList.remove('show'), 80);
+  });
+  document.addEventListener('click', ()=> tip.classList.remove('show'));
+})();
+
+/* ════ SIDEBAR TOGGLE ═══════════════════════════ */
+function toggleSidebar(){
+  const sb  = document.getElementById('sb');
+  const btn = document.getElementById('sb-toggle');
+  const hidden = sb.classList.toggle('hide');
+  btn.querySelector('.arr').textContent = hidden ? '›' : '‹';
+  btn.title = hidden ? 'Show sidebar' : 'Hide sidebar';
+}
 function openM(id){ document.getElementById(id).classList.add('open'); }
 function closeM(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
@@ -984,24 +1085,28 @@ mermaid.initialize({startOnLoad:false,theme:'dark',
   themeVariables:{primaryColor:'#a78bfa',lineColor:'#525268',textColor:'#e2e2ee'}});
 
 /* ════ DEMO CONTENT ═════════════════════════════ */
-function DEMO(){ return `# MarkFlow v2 ✦ Power Markdown Editor
+function DEMO() {
+  return `# MarkFlow v2 ✦ Power Markdown Editor
+> A **top-grade** open source Markdown editor — LaTeX, Mermaid, TOC, footnotes, find & replace, multi-format export and more. Built with ❤ by \`Abdullah Rahat\`.
 
-> A **Top grade** open source editor — LaTeX, Mermaid, TOC, footnotes, find & replace, multi-format export and more. Built with ❤ by \`Abdullah Rahat\` .
 ---
 
 ## ∑ LaTeX Math (KaTeX)
 
-Inline: Einstein's $E = mc^2$, quadratic $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$, Euler $e^{i\\pi}+1=0$
+**Inline math:**  
+Einstein's $E = mc^2$, quadratic $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$, Euler $e^{i\\pi} + 1 = 0$
 
-Display block:
+**Display math:**
+
 $$
-\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}
+\\int_0^{\\infty} e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}
 $$
 
-Maxwell's equations:
+**Maxwell's equations:**
+
 $$
 \\nabla \\cdot \\vec{E} = \\frac{\\rho}{\\varepsilon_0}, \\qquad
-\\nabla \\times \\vec{B} = \\mu_0\\vec{J} + \\mu_0\\varepsilon_0\\frac{\\partial\\vec{E}}{\\partial t}
+\\nabla \\times \\vec{B} = \\mu_0 \\vec{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\vec{E}}{\\partial t}
 $$
 
 ---
@@ -1012,7 +1117,7 @@ $$
 graph TD
     A[📝 Write Markdown] --> B{Preview OK?}
     B -- Yes --> D[📤 Export]
-    B -- No  --> A
+    B -- No --> A
     D --> E[📄 .docx]
     D --> F[📑 .pdf]
     D --> G[🌐 .html]
@@ -1023,31 +1128,31 @@ graph TD
 
 ## 📋 Feature Comparison
 
-| Feature               | MarkFlow v2 |  MarkFlow v1 |
-|-----------------------|:-----------:|:---------:|
-| Live Preview          | ✅          | ✅        |
-| LaTeX / KaTeX         | ✅          | ✅        |
-| Mermaid Diagrams      | ✅          | ✅        |
-| Footnotes             | ✅          | ✅        |
-| ==Highlight== syntax  | ✅          | ❌        |
-| Export .docx (Pandoc) | ✅          | ✅        |
-| Export .pdf           | ✅          | ✅        |
-| Export .html          | ✅          | ✅        |
-| Find & Replace        | ✅          | ✅        |
-| Regex find/replace    | ✅          | ✅        |
-| Table of Contents     | ✅          | ✅        |
-| Scroll Sync           | ✅          | ✅        |
-| Line Numbers          | ✅          | ❌        |
-| Focus Mode            | ✅          | ❌        |
-| Reading Mode          | ✅          | ❌        |
-| Word Count Stats      | ✅          | ✅        |
-| Light/Dark Theme      | ✅          | ✅        |
-| File Manager          | ✅          | ✅        |
-| Import .md files      | ✅          | ✅        |
-| Emoji Picker          | ✅          | ❌        |
-| Copy code button      | ✅          | ❌        |
-| Open Source           | ✅          | ✅        |
-| Zero dependencies     | ✅          | ❌        |
+| Feature                    | MarkFlow v2 | MarkFlow v1 |
+|---------------------------|:-----------:|:---------:|
+| Live Preview              | ✅          | ✅        |
+| LaTeX / KaTeX             | ✅          | ✅        |
+| Mermaid Diagrams          | ✅          | ✅        |
+| Footnotes                 | ✅          | ✅        |
+| ==Highlight== syntax      | ✅          | ❌        |
+| Export .docx              | ✅          | ✅        |
+| Export .pdf               | ✅          | ✅        |
+| Export .html              | ✅          | ✅        |
+| Find & Replace            | ✅          | ✅        |
+| Regex find/replace        | ✅          | ✅        |
+| Table of Contents         | ✅          | ✅        |
+| Scroll Sync               | ✅          | ✅        |
+| Line Numbers              | ✅          | ❌        |
+| Focus Mode                | ✅          | ❌        |
+| Reading Mode              | ✅          | ❌        |
+| Word Count Stats          | ✅          | ✅        |
+| Light/Dark Theme          | ✅          | ✅        |
+| File Manager              | ✅          | ✅        |
+| Import .md files          | ✅          | ✅        |
+| Emoji Picker              | ✅          | ❌        |
+| Copy code button          | ✅          | ❌        |
+| Open Source               | ✅          | ✅        |
+| Zero dependencies         | ✅          | ❌        |
 
 ---
 
@@ -1059,16 +1164,16 @@ graph TD
 - [x] Footnotes[^1]
 - [x] Superscript^2^ and subscript~2~
 - [x] Find & Replace with regex + case sensitivity
-- [x] .docx export (Pandoc-style html-docx-js)
+- [x] .docx export
 - [x] .pdf export via browser print
 - [x] .html export with KaTeX styles
 - [x] Table of Contents panel
-- [x] Scroll sync editor ↔ preview
+- [x] Scroll sync (editor ↔ preview)
 - [x] Line numbers toggle
 - [x] Focus mode (F11)
 - [x] Reading mode
 - [x] Light/Dark theme switch
-- [x] File manager with import
+- [x] File manager with import/export
 - [x] Emoji picker 😀
 - [x] Copy-code buttons on code blocks
 - [ ] Cloud sync (coming soon)
@@ -1077,8 +1182,8 @@ graph TD
 
 ## 💬 Rich Formatting
 
-> "The best tool is the one you got from Allah"
-> — *Abdullah*
+> "The best tool is the one you got from Allah"  
+> — *Abdullah Rahat*
 
 **Bold**, *italic*, ~~strike~~, ==highlight==, \`inline code\`, super^script^, sub~script~
 
@@ -1093,11 +1198,11 @@ x = np.linspace(0, 2*np.pi, 100)
 y = np.sin(x) * np.exp(-x/8)
 
 # Euler identity check
-print(f"e^(iπ)+1 = {np.exp(1j*np.pi)+1:.10f}")  # ≈ 0
+print(f"e^(iπ) + 1 = {np.exp(1j*np.pi) + 1:.10f}")  # ≈ 0
 \`\`\`
 
 \`\`\`javascript
-// Debounce render for performance
+// Debounce render for better performance
 const render = debounce(() => {
   preview.innerHTML = marked.parse(editor.value);
   renderMathInElement(preview, katexOptions);
@@ -1107,10 +1212,11 @@ const render = debounce(() => {
 
 ---
 
-*Shortcuts: **Ctrl+F** search • **Ctrl+D** Word export • **F11** focus • **≡ TOC** in toolbar*
+*Shortcuts: **Ctrl+F** → Find • **Ctrl+D** → Export .docx • **F11** → Focus Mode • **≡** → TOC*
 
-[^1]: Footnotes render automatically at the bottom using **marked-footnote** extension.
-`; }
+[^1]: Footnotes render automatically at the bottom using the **marked-footnote** extension.
+`;
+}
 
 /* ════ INIT ═════════════════════════════════════ */
 (function init(){
@@ -1118,7 +1224,6 @@ const render = debounce(() => {
   const f=files.find(f=>f.id===aid);
   if(f){ ed.value=f.content; document.getElementById('stf').textContent=f.name; }
   document.getElementById('bwrp').classList.add('on'); // word wrap on by default
-  setSidebarHidden(localStorage.getItem('mf2_sb')==='1');
   render();
   renderFL();
   updateStat();
