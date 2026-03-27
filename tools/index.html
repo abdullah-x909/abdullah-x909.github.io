@@ -322,7 +322,7 @@ body.focus #stb{display:none;}
 <div id="tb"><div id="tb-inner">
   <div class="logo">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
-    MarkFlow <span class="logo-v">v2.0.2</span>
+    MarkFlow <span class="logo-v">v2.0.3</span>
   </div>
   <div class="sep"></div>
 
@@ -936,17 +936,103 @@ ${katexCSSBlock}
 }
 
 function exportWord(){
-  const html = buildExportHTML({dark:false, forDocx:true});
   try{
-    const blob = htmlDocx.asBlob(html,{
-      orientation:'portrait',
-      margins:{top:720,right:900,bottom:720,left:900}
-    });
-    saveAs(blob, fname()+'.docx');
-    toast('✓ Exported: '+fname()+'.docx','ok');
-  }catch(e){ toast('Export failed: '+e.message,'err'); }
-}
+    // 🔹 Get markdown
+    const markdown = ed.value;
 
+    // 🔹 Convert Markdown → HTML
+    const htmlContent = marked.parse(markdown, {
+      gfm: true,
+      breaks: true
+    });
+
+    // 🔹 High-quality Word HTML (same style as preview but DOCX-safe)
+    const fullHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${fname()}</title>
+
+      <style>
+        body {
+          font-family: Calibri, Arial, sans-serif;
+          font-size: 11pt;
+          line-height: 1.6;
+          padding: 20px;
+        }
+
+        h1 { font-size: 26pt; font-weight: bold; }
+        h2 { font-size: 22pt; font-weight: bold; }
+        h3 { font-size: 18pt; font-weight: bold; }
+
+        p { margin: 10px 0; }
+
+        ul, ol {
+          margin-left: 20px;
+        }
+
+        code {
+          font-family: Consolas, monospace;
+          background: #f4f4f4;
+          padding: 2px 4px;
+          border-radius: 4px;
+        }
+
+        pre {
+          background: #f4f4f4;
+          padding: 10px;
+          border-radius: 6px;
+          font-family: Consolas, monospace;
+        }
+
+        table {
+          border-collapse: collapse;
+          width: 100%;
+          margin-top: 10px;
+        }
+
+        table, th, td {
+          border: 1px solid #999;
+        }
+
+        th, td {
+          padding: 8px;
+          text-align: left;
+        }
+
+        blockquote {
+          border-left: 4px solid #ccc;
+          padding-left: 10px;
+          color: #555;
+          margin: 10px 0;
+        }
+
+        img {
+          max-width: 100%;
+        }
+      </style>
+    </head>
+
+    <body>
+      ${htmlContent}
+    </body>
+    </html>
+    `;
+
+    // 🔹 Convert → DOCX
+    const blob = htmlDocx.asBlob(fullHTML);
+
+    // 🔹 Download
+    saveAs(blob, fname() + ".docx");
+
+    toast('✓ Exported: ' + fname() + '.docx','ok');
+
+  } catch (err) {
+    console.error(err);
+    toast('Export failed','err');
+  }
+}
 function exportPDF(){
   const isDark = document.body.classList.contains('light') ? false : true;
   const html = buildExportHTML({dark:false}); // always light for print
