@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MarkFlow v2 — Power Markdown Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="window._katexReady=true; if(window._pendingRender) window._pendingRender()"></script>
+<!-- marked.js -->
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<!-- marked-footnote -->
+<script src="https://cdn.jsdelivr.net/npm/marked-footnote@1.1.3/dist/index.umd.min.js"></script>
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-theme"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+<!-- FileSaver -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- html-docx-js for real .docx -->
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+<!-- html2canvas + jsPDF for proper PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d0d12;--surface:#13131a;--panel:#18181f;--panel2:#1e1e28;
+  --border:#252530;--border2:#2e2e3d;
+  --accent:#a78bfa;--aglow:rgba(167,139,250,.15);
+  --a2:#34d399;--a3:#f472b6;--a4:#fbbf24;
+  --text:#e2e2ee;--text2:#9090aa;--muted:#525268;
+  --mono:'JetBrains Mono',monospace;--ui:'Outfit',sans-serif;
+  --tbh:50px;--sbh:26px;--sbw:250px;
+}
+body.light{
+  --bg:#f8f8fc;--surface:#ffffff;--panel:#f2f2f8;--panel2:#eaeaf2;
+  --border:#dddde8;--border2:#c8c8d8;
+  --accent:#7c3aed;--aglow:rgba(124,58,237,.1);
+  --a2:#059669;--a3:#db2777;--a4:#d97706;
+  --text:#1a1a2e;--text2:#4a4a6a;--muted:#8888a8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);display:flex;flex-direction:column;transition:background .2s,color .2s;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── TOOLBAR */
+#tb{height:var(--tbh);background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:1px;flex-shrink:0;z-index:20;
+  overflow-x:auto;overflow-y:visible;}
+#tb::-webkit-scrollbar{height:0;}
+#tb-inner{display:flex;align-items:center;gap:1px;min-width:max-content;overflow:visible;}
+.logo{font-size:14px;font-weight:800;color:var(--accent);margin-right:10px;flex-shrink:0;
+  display:flex;align-items:center;gap:5px;letter-spacing:-.3px;}
+.logo-v{font-size:9px;background:var(--accent);color:var(--bg);padding:1px 5px;
+  border-radius:4px;font-weight:700;margin-left:2px;}
+.sep{width:1px;height:20px;background:var(--border2);margin:0 5px;flex-shrink:0;}
+.b{width:30px;height:30px;border:none;background:transparent;color:var(--text2);
+  cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-family:var(--mono);font-weight:500;transition:background .12s,color .12s;
+  position:static;flex-shrink:0;}
+.b:hover{background:var(--panel2);color:var(--text);}
+.b.on{background:var(--aglow);color:var(--accent);}
+.b svg{width:14px;height:14px;pointer-events:none;}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.xb{height:27px;padding:0 11px;border:none;border-radius:6px;cursor:pointer;
+  font-family:var(--ui);font-size:11px;font-weight:700;
+  display:flex;align-items:center;gap:4px;transition:opacity .15s;flex-shrink:0;}
+.xb:hover{opacity:.82;}
+.xb:active{transform:scale(.97);}
+.xb svg{width:11px;height:11px;}
+.xb-w{background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;}
+.xb-p{background:linear-gradient(135deg,#dc2626,#f97316);color:#fff;}
+.xb-h{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;}
+.xb-m{background:linear-gradient(135deg,#059669,#10b981);color:#fff;}
+.vg{display:flex;background:var(--panel);border-radius:7px;padding:2px;gap:1px;}
+.vb{height:24px;padding:0 9px;border:none;background:transparent;color:var(--muted);
+  font-family:var(--ui);font-size:11px;font-weight:600;cursor:pointer;border-radius:5px;
+  transition:all .12s;}
+.vb.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2);}
+
+/* ── TOOLBAR 2 */
+#tb2{height:33px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:5px;flex-shrink:0;overflow-x:auto;}
+#tb2::-webkit-scrollbar{height:0;}
+.t2{height:21px;padding:0 8px;border:1px solid var(--border2);background:var(--surface);
+  color:var(--text2);border-radius:5px;font-family:var(--ui);font-size:10px;font-weight:600;
+  cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0;}
+.t2:hover{border-color:var(--accent);color:var(--accent);}
+.t2.on{border-color:var(--accent);background:var(--aglow);color:var(--accent);}
+.t2sep{width:1px;height:14px;background:var(--border2);flex-shrink:0;}
+
+/* ── FIND BAR */
+#fb{background:var(--surface);border-bottom:1px solid var(--border);
+  display:none;align-items:center;padding:5px 12px;gap:7px;flex-shrink:0;flex-wrap:wrap;}
+#fb.open{display:flex;}
+.fi{height:25px;padding:0 9px;background:var(--panel2);border:1px solid var(--border2);
+  border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;min-width:150px;}
+.fi:focus{border-color:var(--accent);}
+.fc{font-size:11px;color:var(--muted);min-width:55px;}
+.fb2{height:25px;padding:0 9px;background:var(--panel2);border:1px solid var(--border2);
+  border-radius:5px;color:var(--text2);font-family:var(--ui);font-size:11px;cursor:pointer;transition:all .12s;}
+.fb2:hover{border-color:var(--accent);color:var(--accent);}
+.fb-close{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;}
+
+/* ── LAYOUT */
+#app{flex:1;display:flex;overflow:hidden;}
+
+/* ── GLOBAL TOOLTIP */
+#tip{position:fixed;z-index:9999;background:var(--panel2);border:1px solid var(--border2);
+  color:var(--text);font-size:11px;font-family:var(--ui);white-space:nowrap;
+  padding:4px 9px;border-radius:6px;pointer-events:none;opacity:0;
+  transition:opacity .12s;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+#tip.show{opacity:1;}
+
+/* ── SIDEBAR */
+#sb-wrap{display:flex;flex-direction:row;flex-shrink:0;position:relative;align-items:stretch;}
+#sb{width:var(--sbw);background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;transition:width .22s ease;overflow:hidden;}
+#sb.hide{width:0;border-right:none;}
+#sb-toggle{
+  width:13px;background:var(--surface);
+  border:1px solid var(--border);border-left:none;
+  border-radius:0 6px 6px 0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:11px;transition:background .15s,color .15s;
+  flex-shrink:0;padding:0;
+}
+#sb-toggle:hover{background:var(--panel2);color:var(--accent);}
+#sb.hide+#sb-toggle{border-left:1px solid var(--border);border-radius:6px;}
+#sb-toggle .arr{transition:transform .22s;display:block;line-height:1;user-select:none;}
+.sbh{padding:9px 11px 7px;font-size:9px;font-weight:700;letter-spacing:1.3px;
+  color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;}
+.sbhb{display:flex;gap:3px;}
+.sbi{width:20px;height:20px;border:none;background:transparent;color:var(--muted);
+  cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;transition:all .12s;}
+.sbi:hover{background:var(--aglow);color:var(--accent);}
+#fsrch{margin:6px 8px;padding:5px 9px;background:var(--panel);
+  border:1px solid var(--border);border-radius:5px;color:var(--text);
+  font-family:var(--ui);font-size:12px;outline:none;width:calc(100% - 16px);}
+#fsrch:focus{border-color:var(--accent);}
+.fl{flex:1;overflow-y:auto;padding:4px;}
+.fi2{padding:7px 8px;border-radius:6px;cursor:pointer;display:flex;align-items:center;
+  gap:6px;font-size:12px;color:var(--text2);transition:all .12s;user-select:none;min-width:0;}
+.fi2:hover{background:var(--panel2);color:var(--text);}
+.fi2.on{background:var(--aglow);color:var(--accent);}
+.fi2 svg{width:12px;height:12px;flex-shrink:0;}
+.fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fd{background:none;border:none;color:transparent;cursor:pointer;font-size:12px;
+  padding:0 2px;line-height:1;transition:color .12s;}
+.fi2:hover .fd{color:var(--muted);}
+.fd:hover{color:var(--a3) !important;}
+
+/* TOC */
+#tocp{border-top:1px solid var(--border);max-height:220px;overflow-y:auto;padding:5px 0;display:none;}
+.toch{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;padding:3px 11px 5px;}
+.toci{display:block;padding:3px 11px;font-size:11px;color:var(--text2);cursor:pointer;
+  transition:all .1s;border-left:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.toci:hover{color:var(--accent);border-left-color:var(--accent);}
+.toci.l2{padding-left:20px;}
+.toci.l3{padding-left:29px;}
+.toci.l4{padding-left:38px;}
+
+/* ── EDITOR */
+#work{flex:1;display:flex;overflow:hidden;}
+#ep{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);position:relative;min-width:80px;}
+#lns{position:absolute;left:0;top:0;bottom:0;width:40px;background:var(--surface);
+  border-right:1px solid var(--border);font-family:var(--mono);font-size:12px;line-height:1.75;
+  color:var(--muted);text-align:right;padding-top:32px;padding-right:8px;
+  pointer-events:none;overflow:hidden;user-select:none;z-index:1;display:none;}
+.ln{display:block;}
+#ed{flex:1;width:100%;background:transparent;color:var(--text);
+  font-family:var(--mono);font-size:14px;line-height:1.75;
+  border:none;outline:none;resize:none;padding:32px 36px 32px 36px;
+  tab-size:2;caret-color:var(--accent);overflow-y:auto;transition:background .2s;}
+#ed::placeholder{color:var(--muted);}
+body.nowrap #ed{white-space:pre;overflow-x:auto;}
+.db{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:background .15s;}
+.db:hover,.db.drag{background:var(--accent);}
+
+/* ── PREVIEW */
+#pp{flex:1;background:var(--panel);overflow-y:auto;padding:36px 44px;
+  border-left:1px solid var(--border);min-width:80px;}
+#pv{max-width:760px;margin:0 auto;font-size:15.5px;line-height:1.85;color:var(--text);}
+#pv h1{font-family:var(--ui);font-size:2em;font-weight:800;margin:.1em 0 .5em;
+  border-bottom:2px solid var(--accent);padding-bottom:.3em;}
+#pv h2{font-family:var(--ui);font-size:1.45em;font-weight:700;margin:1.5em 0 .4em;}
+#pv h3{font-family:var(--ui);font-size:1.15em;font-weight:700;margin:1.2em 0 .3em;color:var(--text2);}
+#pv h4,#pv h5,#pv h6{font-family:var(--ui);font-weight:700;margin:.9em 0 .25em;color:var(--muted);}
+#pv p{margin:.6em 0 .8em;}
+#pv a{color:var(--accent);text-decoration:none;}
+#pv a:hover{text-decoration:underline;}
+#pv strong{font-weight:700;}
+#pv em{font-style:italic;}
+#pv del{text-decoration:line-through;color:var(--muted);}
+#pv mark{background:rgba(251,191,36,.28);color:var(--text);border-radius:2px;padding:0 2px;}
+#pv code{font-family:var(--mono);font-size:.85em;background:var(--panel2);
+  color:var(--a2);padding:2px 6px;border-radius:4px;}
+#pv pre{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--accent);
+  border-radius:8px;padding:16px 20px;overflow-x:auto;margin:1em 0;position:relative;}
+#pv pre code{background:none;padding:0;color:inherit;font-size:.87em;}
+.cc{position:absolute;top:7px;right:7px;background:var(--panel2);border:1px solid var(--border2);
+  color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;
+  font-family:var(--ui);transition:all .12s;opacity:0;}
+#pv pre:hover .cc{opacity:1;}
+.cc:hover{color:var(--accent);border-color:var(--accent);}
+#pv blockquote{border-left:3px solid var(--accent);padding:.5em 1em;margin:1em 0;
+  background:var(--aglow);border-radius:0 6px 6px 0;color:var(--text2);font-style:italic;}
+#pv ul,#pv ol{padding-left:1.8em;margin:.6em 0;}
+#pv li{margin:.3em 0;}
+#pv table{border-collapse:collapse;width:100%;margin:1em 0;}
+#pv th{background:var(--aglow);color:var(--accent);padding:8px 12px;text-align:left;
+  border:1px solid var(--border2);font-family:var(--ui);font-weight:700;}
+#pv td{padding:8px 12px;border:1px solid var(--border2);}
+#pv tr:hover td{background:rgba(167,139,250,.04);}
+#pv hr{border:none;border-top:1px solid var(--border2);margin:1.5em 0;}
+#pv img{max-width:100%;border-radius:8px;}
+#pv input[type="checkbox"]{margin-right:6px;}
+#pv .katex-display{overflow-x:auto;padding:.5em 0;}
+#pv .mermaid{background:var(--panel2);border-radius:8px;padding:20px;text-align:center;
+  margin:1em 0;border:1px solid var(--border2);}
+#pv .footnotes{border-top:1px solid var(--border2);margin-top:2em;padding-top:1em;
+  font-size:.88em;color:var(--text2);}
+body.reading #pv{max-width:680px;font-size:17px;line-height:2;}
+
+/* ── STATUS */
+#stb{height:var(--sbh);background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:14px;
+  font-size:10.5px;color:var(--muted);font-family:var(--mono);flex-shrink:0;}
+.st{display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.st b{color:var(--text2);}
+.std{width:5px;height:5px;border-radius:50%;background:var(--a2);}
+.str{margin-left:auto;display:flex;gap:12px;align-items:center;}
+#stm{color:var(--accent);font-weight:600;font-size:10px;}
+#sts{font-size:10px;}
+
+/* ── WORD COUNT */
+#wcp{position:fixed;bottom:36px;right:12px;background:var(--surface);
+  border:1px solid var(--border2);border-radius:10px;padding:12px 16px;z-index:50;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);min-width:175px;
+  transform:translateY(4px) scale(.97);opacity:0;pointer-events:none;transition:all .17s;}
+#wcp.open{opacity:1;pointer-events:all;transform:none;}
+.wr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;
+  border-bottom:1px solid var(--border);}
+.wr:last-child{border:none;}
+.wl{color:var(--muted);}
+.wv{color:var(--text);font-family:var(--mono);font-weight:500;}
+
+/* ── MODALS */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;
+  justify-content:center;z-index:999;opacity:0;pointer-events:none;
+  transition:opacity .2s;backdrop-filter:blur(6px);}
+.ov.open{opacity:1;pointer-events:all;}
+.mo{background:var(--surface);border:1px solid var(--border2);border-radius:12px;
+  padding:22px 26px;min-width:340px;transform:translateY(8px);transition:transform .2s;}
+.ov.open .mo{transform:translateY(0);}
+.mo h3{font-size:15px;font-weight:700;margin-bottom:13px;}
+.mi{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;
+  padding:8px 11px;color:var(--text);font-family:var(--ui);font-size:13px;outline:none;transition:border .15s;}
+.mi:focus{border-color:var(--accent);}
+.ma{margin-top:14px;display:flex;gap:8px;justify-content:flex-end;}
+.mc{padding:6px 14px;background:var(--panel);border:1px solid var(--border2);
+  border-radius:6px;color:var(--muted);font-family:var(--ui);font-size:12px;cursor:pointer;}
+.mok{padding:6px 14px;background:linear-gradient(135deg,var(--accent),var(--a2));
+  border:none;border-radius:6px;color:var(--bg);font-family:var(--ui);font-size:12px;font-weight:700;cursor:pointer;}
+.scg{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin-top:6px;max-height:60vh;overflow-y:auto;}
+.scr{display:flex;justify-content:space-between;align-items:center;padding:4px 0;
+  border-bottom:1px solid var(--border);}
+.sck{font-family:var(--mono);font-size:10px;background:var(--panel2);
+  padding:2px 6px;border-radius:4px;color:var(--accent);}
+.scd{font-size:11px;color:var(--text2);}
+
+/* ── EMOJI */
+#emp{position:fixed;z-index:200;background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;padding:8px;display:none;flex-wrap:wrap;gap:2px;
+  width:252px;max-height:190px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+
+/* ── TOAST */
+#tst{position:fixed;bottom:38px;left:50%;transform:translateX(-50%) translateY(8px);
+  background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
+  padding:8px 16px;font-size:12px;color:var(--text);opacity:0;transition:all .22s;
+  z-index:1000;pointer-events:none;}
+#tst.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#tst.ok{border-color:var(--a2);}
+#tst.err{border-color:var(--a3);}
+#tst.info{border-color:var(--accent);}
+
+/* ── VIEW HELPERS */
+#work.edit-only #pp{display:none;}
+#work.edit-only .db{display:none;}
+#work.prev-only #ep{display:none;}
+#work.prev-only .db{display:none;}
+#work.prev-only #pp{padding:48px 10%;}
+body.focus #tb2{display:none;}
+body.focus #sb-wrap{width:0;overflow:hidden;}
+body.focus #ed{padding:48px 80px;font-size:16px;}
+body.focus #stb{display:none;}
+</style>
+</head>
+<body>
+<!-- GLOBAL TOOLTIP -->
+<div id="tip"></div>
+
+<!-- TOOLBAR -->
+<div id="tb"><div id="tb-inner">
+  <div class="logo">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
+    MarkFlow <span class="logo-v">v2.0.3</span>
+  </div>
+  <div class="sep"></div>
+  <button class="b" data-t="Bold Ctrl+B" onclick="wrap('**','**')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg></button>
+  <button class="b" data-t="Italic Ctrl+I" onclick="wrap('*','*')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+  <button class="b" data-t="Strikethrough" onclick="wrap('~~','~~')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4H9a3 3 0 00-3 3 3 3 0 003 3h6a3 3 0 010 6H6"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+  <button class="b" data-t="Highlight ==text==" onclick="wrap('==','==')">Hl</button>
+  <button class="b" data-t="Superscript" onclick="wrap('^','^')">x²</button>
+  <button class="b" data-t="Subscript" onclick="wrap('~','~')">x₂</button>
+  <button class="b" data-t="Inline code Ctrl+`" onclick="wrap('`','`')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+  <div class="sep"></div>
+  <button class="b" data-t="H1" onclick="pfx('# ')"><b style="font-size:13px">H1</b></button>
+  <button class="b" data-t="H2" onclick="pfx('## ')"><b style="font-size:11px">H2</b></button>
+  <button class="b" data-t="H3" onclick="pfx('### ')"><b style="font-size:10px">H3</b></button>
+  <div class="sep"></div>
+  <button class="b" data-t="Bullet list" onclick="pfx('- ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg></button>
+  <button class="b" data-t="Numbered list" onclick="pfx('1. ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2" stroke-width="1.5"/></svg></button>
+  <button class="b" data-t="Task list" onclick="pfx('- [ ] ')">☐</button>
+  <button class="b" data-t="Blockquote" onclick="pfx('> ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg></button>
+  <div class="sep"></div>
+  <button class="b" data-t="Code block" onclick="codeBlock()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M8 9l-3 3 3 3M16 9l3 3-3 3"/></svg></button>
+  <button class="b" data-t="LaTeX inline $…$" onclick="wrap('$','$')">∑</button>
+  <button class="b" data-t="LaTeX block $$…$$" onclick="mathBlock()">∬</button>
+  <button class="b" data-t="Mermaid diagram" onclick="mermaidBlock()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/></svg></button>
+  <button class="b" data-t="Link Ctrl+K" onclick="insertLink()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button>
+  <button class="b" data-t="Image" onclick="insertImage()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+  <button class="b" data-t="Table" onclick="insertTable()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
+  <button class="b" data-t="Footnote" onclick="insertFootnote()"><sup>†</sup></button>
+  <button class="b" data-t="Horizontal rule" onclick="ins('\n\n---\n\n')">—</button>
+  <button class="b" data-t="Emoji" onclick="toggleEmoji()" id="ebtn">😀</button>
+  <div class="tbr">
+    <button class="xb xb-w" onclick="exportWord()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>.docx</button>
+    <button class="xb xb-p" onclick="exportPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>.pdf</button>
+    <button class="xb xb-h" onclick="exportHTML()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>.html</button>
+    <button class="xb xb-m" onclick="exportMD()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>.md</button>
+    <div class="sep"></div>
+    <div class="vg">
+      <button class="vb" id="ve" onclick="setView('edit-only')">Edit</button>
+      <button class="vb on" id="vs" onclick="setView('split')">Split</button>
+      <button class="vb" id="vp" onclick="setView('prev-only')">Preview</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- TOOLBAR 2 -->
+<div id="tb2">
+  <button class="t2" onclick="openFind()" id="fndtgl">🔍 Find &amp; Replace</button>
+  <div class="t2sep"></div>
+  <button class="t2" onclick="toggleLN()" id="blns">¶ Line Nos</button>
+  <button class="t2" onclick="toggleWrap()" id="bwrp">↵ Word Wrap</button>
+  <button class="t2" onclick="toggleSync()" id="bsnc">⇅ Scroll Sync</button>
+  <button class="t2" onclick="toggleTOC()" id="btoc">≡ TOC</button>
+  <button class="t2" onclick="toggleFocus()" id="bfcs">◎ Focus Mode</button>
+  <button class="t2" onclick="toggleRead()" id="brd">📖 Reading</button>
+  <div class="t2sep"></div>
+  <button class="t2" onclick="toggleTheme()" id="bthm">☀ Theme</button>
+  <button class="t2" onclick="openShortcuts()">⌨ Shortcuts</button>
+  <button class="t2" onclick="toggleWC()" id="bwc">Σ Stats</button>
+</div>
+
+<!-- FIND BAR -->
+<div id="fb">
+  <input class="fi" id="fq" placeholder="Find…" oninput="doFind()"/>
+  <input class="fi" id="rq" placeholder="Replace…" style="min-width:120px"/>
+  <span class="fc" id="fcnt"></span>
+  <button class="fb2" onclick="findNav(-1)">▲ Prev</button>
+  <button class="fb2" onclick="findNav(1)">▼ Next</button>
+  <button class="fb2" onclick="doReplace()">Replace</button>
+  <button class="fb2" onclick="doReplaceAll()">All</button>
+  <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;color:var(--text2)">
+    <input type="checkbox" id="fcs"/> Case
+  </label>
+  <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;color:var(--text2)">
+    <input type="checkbox" id="frx"/> Regex
+  </label>
+  <button class="fb-close" onclick="closeFind()">✕</button>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="sb-wrap">
+    <div id="sb">
+      <div class="sbh">
+        Files
+        <div class="sbhb">
+          <button class="sbi" onclick="newFile()" title="New">+</button>
+          <button class="sbi" onclick="importFile()" title="Import .md">↑</button>
+        </div>
+      </div>
+      <input id="fsrch" placeholder="Search files…" oninput="filterFiles()"/>
+      <div class="fl" id="fl"></div>
+      <div id="tocp">
+        <div class="toch">Table of Contents</div>
+        <div id="toci"></div>
+      </div>
+    </div>
+    <button id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><span class="arr">‹</span></button>
+  </div>
+  <div id="work">
+    <div id="ep">
+      <div id="lns"></div>
+      <textarea id="ed" spellcheck="false" placeholder="Write Markdown here…"></textarea>
+    </div>
+    <div class="db" id="divbar"></div>
+    <div id="pp">
+      <div id="pv"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS -->
+<div id="stb">
+  <div class="st"><div class="std"></div><b id="stf">untitled.md</b></div>
+  <div class="st">Ln <b id="stln">1</b> Col <b id="stcl">1</b></div>
+  <div class="str">
+    <div class="st">W:<b id="stw">0</b></div>
+    <div class="st">C:<b id="stc">0</b></div>
+    <div class="st">L:<b id="stl">0</b></div>
+    <span id="sts"></span>
+    <span id="stm">MARKDOWN</span>
+  </div>
+</div>
+
+<!-- WORD COUNT PANEL -->
+<div id="wcp">
+  <div class="wr"><span class="wl">Words</span><span class="wv" id="ww">0</span></div>
+  <div class="wr"><span class="wl">Characters</span><span class="wv" id="wc2">0</span></div>
+  <div class="wr"><span class="wl">Chars (no spaces)</span><span class="wv" id="wcn">0</span></div>
+  <div class="wr"><span class="wl">Lines</span><span class="wv" id="wln">0</span></div>
+  <div class="wr"><span class="wl">Paragraphs</span><span class="wv" id="wpa">0</span></div>
+  <div class="wr"><span class="wl">Read time</span><span class="wv" id="wrt">0 min</span></div>
+</div>
+
+<!-- MODALS -->
+<div class="ov" id="mnew">
+  <div class="mo">
+    <h3>New File</h3>
+    <input class="mi" id="nname" placeholder="filename.md"/>
+    <div class="ma">
+      <button class="mc" onclick="closeM('mnew')">Cancel</button>
+      <button class="mok" onclick="confirmNew()">Create</button>
+    </div>
+  </div>
+</div>
+<div class="ov" id="msc">
+  <div class="mo" style="min-width:480px">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="scg" id="scg"></div>
+    <div class="ma"><button class="mok" onclick="closeM('msc')">Close</button></div>
+  </div>
+</div>
+
+<!-- EMOJI PICKER -->
+<div id="emp"></div>
+<!-- TOAST -->
+<div id="tst"></div>
+<!-- IMPORT -->
+<input type="file" id="iinp" accept=".md,.txt" style="display:none"/>
+
+<script>
+/* ════ MARKED SETUP ═════════════════════════════ */
+marked.use(markedFootnote());
+marked.use({
+  gfm:true, breaks:true,
+  extensions:[{
+    name:'mark', level:'inline',
+    start(s){ return s.indexOf('=='); },
+    tokenizer(s){ const m=s.match(/^==([^=\n]+)==/); if(m) return {type:'mark',raw:m[0],text:m[1]}; },
+    renderer(t){ return `<mark>${t.text}</mark>`; }
+  }],
+  renderer:(()=>{
+    const r=new marked.Renderer();
+    r.code=(code,lang)=>{
+      if(lang==='mermaid') return `<div class="mermaid">${code}</div>`;
+      const hl=lang&&hljs.getLanguage(lang)
+        ? hljs.highlight(code,{language:lang,ignoreIllegals:true}).value
+        : hljs.highlightAuto(code).value;
+      return `<pre><button class="cc" onclick="cpCode(this)">copy</button><code class="hljs">${hl}</code></pre>`;
+    };
+    r.heading=(text,level)=>{
+      const id='h-'+text.toLowerCase().replace(/[^\w]+/g,'-');
+      return `<h${level} id="${id}">${text}</h${level}>`;
+    };
+    return r;
+  })()
+});
+
+/* ════ STATE ════════════════════════════════════ */
+let files=JSON.parse(localStorage.getItem('mf2')||'null')||[{id:1,name:'README.md',content:DEMO()}];
+let aid=files[0].id, svt=null, syncon=false, lnon=false, fms=[], fmx=0, fnc=0;
+const ed=document.getElementById('ed');
+const pv=document.getElementById('pv');
+const lns=document.getElementById('lns');
+
+/* ════ RENDER ═══════════════════════════════════ */
+let rt=null;
+function render(){ clearTimeout(rt); rt=setTimeout(_render,80); }
+function _render(){
+  const md=ed.value;
+  pv.innerHTML=marked.parse(md);
+  function doKatex(){
+    renderMathInElement(pv,{
+      delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'$', right:'$', display:false},
+        {left:'\\[',right:'\\]',display:true},
+        {left:'\\(',right:'\\)',display:false}
+      ],
+      throwOnError:false
+    });
+  }
+  if(window._katexReady) doKatex();
+  else window._pendingRender=doKatex;
+  mermaid.run({nodes:pv.querySelectorAll('.mermaid')});
+  updateStat(md); updateTOC(); updateLN();
+  schedSave();
+}
+ed.addEventListener('input',render);
+
+/* ════ LINE NUMBERS ═════════════════════════════ */
+function updateLN(){
+  if(!lnon) return;
+  lns.innerHTML=ed.value.split('\n').map((_,i)=>`<span class="ln">${i+1}</span>`).join('');
+}
+function toggleLN(){
+  lnon=!lnon;
+  lns.style.display=lnon?'block':'none';
+  ed.style.paddingLeft=lnon?'50px':'36px';
+  document.getElementById('blns').classList.toggle('on',lnon);
+  updateLN();
+}
+
+/* ════ STATUS ═══════════════════════════════════ */
+function updateStat(md){
+  const t=md||ed.value;
+  const w=t.trim()?t.trim().split(/\s+/).length:0;
+  document.getElementById('stw').textContent=w;
+  document.getElementById('stc').textContent=t.length;
+  document.getElementById('stl').textContent=t.split('\n').length;
+  document.getElementById('ww').textContent=w;
+  document.getElementById('wc2').textContent=t.length;
+  document.getElementById('wcn').textContent=t.replace(/\s/g,'').length;
+  document.getElementById('wln').textContent=t.split('\n').length;
+  document.getElementById('wpa').textContent=t.split(/\n\s*\n/).filter(Boolean).length;
+  document.getElementById('wrt').textContent=Math.max(1,Math.ceil(w/200))+' min';
+}
+ed.addEventListener('keyup',cur); ed.addEventListener('click',cur);
+function cur(){
+  const v=ed.value.substring(0,ed.selectionStart);
+  const ls=v.split('\n');
+  document.getElementById('stln').textContent=ls.length;
+  document.getElementById('stcl').textContent=ls[ls.length-1].length+1;
+}
+
+/* ════ SCROLL SYNC ══════════════════════════════ */
+let syncLk=false;
+ed.addEventListener('scroll',()=>{
+  if(!syncon||syncLk) return;
+  syncLk=true;
+  const pct=ed.scrollTop/(ed.scrollHeight-ed.clientHeight);
+  const pp=document.getElementById('pp');
+  pp.scrollTop=pct*(pp.scrollHeight-pp.clientHeight);
+  setTimeout(()=>syncLk=false,40);
+});
+function toggleSync(){
+  syncon=!syncon;
+  document.getElementById('bsnc').classList.toggle('on',syncon);
+  toast(syncon?'Scroll sync ON':'Scroll sync OFF','info');
+}
+
+/* ════ TOC ══════════════════════════════════════ */
+function updateTOC(){
+  const tp=document.getElementById('tocp');
+  if(tp.style.display==='none'||!tp.style.display) return;
+  const ti=document.getElementById('toci');
+  ti.innerHTML=[...pv.querySelectorAll('h1,h2,h3,h4')].map(h=>{
+    const l=+h.tagName[1];
+    return `<div class="toci l${l}" onclick="scrollH('${h.id}')">${h.textContent}</div>`;
+  }).join('');
+}
+function scrollH(id){ const e=document.getElementById(id); if(e) e.scrollIntoView({behavior:'smooth'}); }
+function toggleTOC(){
+  const p=document.getElementById('tocp');
+  const on=p.style.display!=='block';
+  p.style.display=on?'block':'none';
+  document.getElementById('btoc').classList.toggle('on',on);
+  if(on) updateTOC();
+}
+
+/* ════ FILES ════════════════════════════════════ */
+function savF(){ localStorage.setItem('mf2',JSON.stringify(files)); }
+function schedSave(){
+  clearTimeout(svt);
+  const f=files.find(f=>f.id===aid);
+  if(f) f.content=ed.value;
+  const s=document.getElementById('sts');
+  s.textContent='● saving…'; s.style.color='var(--a4)';
+  svt=setTimeout(()=>{ savF(); s.textContent='✓ saved'; s.style.color='var(--a2)'; },700);
+}
+function renderFL(filter=''){
+  const fl=document.getElementById('fl');
+  fl.innerHTML='';
+  files.filter(f=>f.name.toLowerCase().includes(filter.toLowerCase())).forEach(f=>{
+    const el=document.createElement('div');
+    el.className='fi2'+(f.id===aid?' on':'');
+    el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="fn">${f.name}</span>${files.length>1?`<button class="fd" onclick="delF(event,${f.id})">✕</button>`:''}`;
+    el.addEventListener('click',e=>{ if(!e.target.classList.contains('fd')) swF(f.id); });
+    fl.appendChild(el);
+  });
+}
+function filterFiles(){ renderFL(document.getElementById('fsrch').value); }
+function swF(id){
+  const cur=files.find(f=>f.id===aid); if(cur) cur.content=ed.value;
+  aid=id;
+  const f=files.find(f=>f.id===id);
+  ed.value=f.content;
+  document.getElementById('stf').textContent=f.name;
+  render(); renderFL();
+}
+function newFile(){
+  document.getElementById('nname').value='';
+  openM('mnew');
+  setTimeout(()=>document.getElementById('nname').focus(),100);
+}
+function confirmNew(){
+  let n=document.getElementById('nname').value.trim()||'untitled.md';
+  if(!n.endsWith('.md')) n+='.md';
+  const cur=files.find(f=>f.id===aid); if(cur) cur.content=ed.value;
+  const id=Date.now();
+  files.push({id,name:n,content:`# ${n.replace('.md','')}\n\n`});
+  aid=id; ed.value=files[files.length-1].content;
+  document.getElementById('stf').textContent=n;
+  savF(); render(); renderFL(); closeM('mnew');
+}
+function delF(e,id){
+  e.stopPropagation(); files=files.filter(f=>f.id!==id);
+  if(aid===id){ aid=files[files.length-1].id; const f=files.find(f=>f.id===aid); ed.value=f.content; document.getElementById('stf').textContent=f.name; render(); }
+  savF(); renderFL();
+}
+function importFile(){ document.getElementById('iinp').click(); }
+document.getElementById('iinp').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const cur=files.find(f=>f.id===aid); if(cur) cur.content=ed.value;
+    const id=Date.now();
+    files.push({id,name:file.name,content:ev.target.result});
+    aid=id; ed.value=files[files.length-1].content;
+    document.getElementById('stf').textContent=file.name;
+    savF(); render(); renderFL(); toast('Imported: '+file.name,'ok');
+  };
+  r.readAsText(file); e.target.value='';
+});
+
+/* ════ VIEW ═════════════════════════════════════ */
+function setView(m){
+  document.getElementById('work').className=m;
+  document.getElementById('ve').classList.toggle('on',m==='edit-only');
+  document.getElementById('vs').classList.toggle('on',m==='split');
+  document.getElementById('vp').classList.toggle('on',m==='prev-only');
+}
+
+/* ════════════════════════════════════════════════════════
+   SMART WRAP/TOGGLE — unwraps if already wrapped
+   ════════════════════════════════════════════════════════ */
+function wrap(before, after){
+  const s = ed.selectionStart, e = ed.selectionEnd;
+  const sel = ed.value.substring(s, e);
+  const bLen = before.length, aLen = after.length;
+
+  // Case 1: selection itself is wrapped — e.g. user selected "**text**" → unwrap inner
+  if(sel.startsWith(before) && sel.endsWith(after) && sel.length >= bLen + aLen){
+    const inner = sel.slice(bLen, sel.length - aLen);
+    ed.setRangeText(inner, s, e, 'select');
+    ed.selectionStart = s;
+    ed.selectionEnd = s + inner.length;
+    ed.focus(); render();
+    return;
+  }
+
+  // Case 2: text AROUND the selection has the markers — e.g. cursor inside **|text|**
+  const preText = ed.value.substring(Math.max(0, s - bLen), s);
+  const postText = ed.value.substring(e, Math.min(ed.value.length, e + aLen));
+  if(preText === before && postText === after){
+    // Remove the markers around the selection
+    ed.setRangeText(sel, s - bLen, e + aLen, 'select');
+    ed.selectionStart = s - bLen;
+    ed.selectionEnd = s - bLen + sel.length;
+    ed.focus(); render();
+    return;
+  }
+
+  // Case 3: nothing selected — check if cursor is inside a wrapped word
+  if(s === e){
+    // Scan outward to find matching markers
+    const val = ed.value;
+    // Look backward for `before`
+    let bIdx = val.lastIndexOf(before, s - 1);
+    if(bIdx !== -1 && bIdx >= s - 200){
+      // Look forward for `after` starting from cursor
+      let aIdx = val.indexOf(after, s);
+      if(aIdx !== -1 && aIdx <= s + 200){
+        // Verify there's no line break between them
+        const between = val.substring(bIdx, aIdx + aLen);
+        if(!between.includes('\n')){
+          const inner = val.substring(bIdx + bLen, aIdx);
+          ed.setRangeText(inner, bIdx, aIdx + aLen, 'select');
+          ed.selectionStart = bIdx;
+          ed.selectionEnd = bIdx + inner.length;
+          ed.focus(); render();
+          return;
+        }
+      }
+    }
+    // No existing wrap found — wrap the word "text" as placeholder
+    ed.setRangeText(before + 'text' + after, s, e, 'select');
+    ed.selectionStart = s + bLen;
+    ed.selectionEnd = s + bLen + 4;
+    ed.focus(); render();
+    return;
+  }
+
+  // Case 4: normal wrap — selection has no markers
+  ed.setRangeText(before + sel + after, s, e, 'select');
+  ed.selectionStart = s + bLen;
+  ed.selectionEnd = s + bLen + sel.length;
+  ed.focus(); render();
+}
+
+function pfx(p){
+  const s=ed.selectionStart,ls=ed.value.lastIndexOf('\n',s-1)+1;
+  ed.setRangeText(p,ls,ls,'end'); ed.focus(); render();
+}
+function ins(t){ ed.setRangeText(t,ed.selectionStart,ed.selectionStart,'end'); ed.focus(); render(); }
+function codeBlock(){ ins('\n```\n'+(ed.value.substring(ed.selectionStart,ed.selectionEnd)||'// code here')+'\n```\n'); }
+function mathBlock(){ ins('\n$$\n\\int_0^\\infty e^{-x}\\,dx = 1\n$$\n'); }
+function mermaidBlock(){ ins('\n```mermaid\ngraph TD\n  A[Start] --> B{Choice}\n  B -- Yes --> C[OK]\n  B -- No --> D[No]\n```\n'); }
+function insertLink(){ const s=ed.selectionStart,e=ed.selectionEnd,sel=ed.value.substring(s,e); ed.setRangeText(`[${sel||'link'}](https://url.com)`,s,e,'end'); ed.focus(); render(); }
+function insertImage(){ ins('![alt](https://url.com/image.png)'); }
+function insertTable(){ ins('\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| A | B | C |\n| D | E | F |\n'); }
+function insertFootnote(){ const n=++fnc,s=ed.selectionStart; ed.setRangeText(`[^${n}]`,s,s,'end'); ed.setRangeText(`\n[^${n}]: Footnote ${n}.\n`,ed.value.length,ed.value.length,'end'); ed.focus(); render(); }
+function cpCode(btn){ navigator.clipboard.writeText(btn.nextElementSibling.textContent).then(()=>{ btn.textContent='✓'; setTimeout(()=>btn.textContent='copy',1500); }); }
+
+/* ════ EMOJI ════════════════════════════════════ */
+const EMJS='😀😃😄😁😆😅🤣😂🙂😊😇🥰😍🤩😘😚😙🤗🤔🤐😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶😵🤯🤠🥳😎🤓🧐😕😟🙁☹😮😯😲😳🥺😦😧😨😰😥😢😭😱😖😣😞😓😩😫🤬😡😠🤡👻💀☠👽👾🤖🎃💩❤🧡💛💚💙💜🖤🤍🤎💯✅❌⚡🔥💧⭐🌈🎯🚀💡🔑📚🎵🎮🏆🌍📝🔬⚙🧪⚗🔭📡🛸🤖💻📱⌨🖥🖨🖱📷📸📹🎬🎤🎧🎼🎹🎸🎺🥁🎲♟🧩'.split('');
+const emp=document.getElementById('emp');
+EMJS.forEach(em=>{
+  const btn=document.createElement('button');
+  btn.textContent=em;
+  btn.style.cssText='background:none;border:none;cursor:pointer;font-size:17px;padding:2px;border-radius:4px;';
+  btn.addEventListener('mouseenter',()=>btn.style.background='var(--panel2)');
+  btn.addEventListener('mouseleave',()=>btn.style.background='none');
+  btn.onclick=()=>{ ins(em); emp.style.display='none'; };
+  emp.appendChild(btn);
+});
+function toggleEmoji(){
+  if(emp.style.display==='flex'){emp.style.display='none';return;}
+  const r=document.getElementById('ebtn').getBoundingClientRect();
+  emp.style.cssText=`display:flex;top:${r.bottom+4}px;left:${Math.min(r.left,window.innerWidth-260)}px;`;
+  emp.style.flexWrap='wrap'; emp.style.gap='2px'; emp.style.width='252px';
+  emp.style.maxHeight='190px'; emp.style.overflowY='auto';
+  emp.style.position='fixed'; emp.style.zIndex='200';
+  emp.style.background='var(--surface)'; emp.style.border='1px solid var(--border2)';
+  emp.style.borderRadius='10px'; emp.style.padding='8px';
+  emp.style.boxShadow='0 8px 32px rgba(0,0,0,.4)';
+}
+document.addEventListener('click',e=>{ if(!emp.contains(e.target)&&e.target.id!=='ebtn') emp.style.display='none'; });
+
+/* ════ FIND & REPLACE ═══════════════════════════ */
+function openFind(){
+  const on=document.getElementById('fb').classList.toggle('open');
+  document.getElementById('fndtgl').classList.toggle('on',on);
+  if(on) setTimeout(()=>document.getElementById('fq').focus(),50);
+}
+function closeFind(){ document.getElementById('fb').classList.remove('open'); document.getElementById('fndtgl').classList.remove('on'); document.getElementById('fcnt').textContent=''; }
+function doFind(){
+  const q=document.getElementById('fq').value;
+  const cs=document.getElementById('fcs').checked;
+  const rx=document.getElementById('frx').checked;
+  fms=[]; fmx=0; document.getElementById('fcnt').textContent='';
+  if(!q) return;
+  let re; try{ re=new RegExp(rx?q:q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),cs?'g':'gi'); }catch(e){return;}
+  let m; const txt=ed.value;
+  while((m=re.exec(txt))!==null) fms.push({s:m.index,e:m.index+m[0].length});
+  document.getElementById('fcnt').textContent=fms.length?`${fmx+1}/${fms.length}`:'No match';
+  if(fms.length) hlFind(0);
+}
+function findNav(d){ if(!fms.length) return; fmx=(fmx+d+fms.length)%fms.length; hlFind(fmx); document.getElementById('fcnt').textContent=`${fmx+1}/${fms.length}`; }
+function hlFind(i){ ed.focus(); ed.setSelectionRange(fms[i].s,fms[i].e); }
+function doReplace(){ if(!fms.length) return; const r=document.getElementById('rq').value,m=fms[fmx]; ed.setRangeText(r,m.s,m.e,'end'); render(); doFind(); }
+function doReplaceAll(){
+  const q=document.getElementById('fq').value,r=document.getElementById('rq').value;
+  const cs=document.getElementById('fcs').checked,rx=document.getElementById('frx').checked;
+  if(!q) return;
+  let re; try{ re=new RegExp(rx?q:q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),cs?'g':'gi'); }catch(e){return;}
+  const cnt=(ed.value.match(re)||[]).length;
+  ed.value=ed.value.replace(re,r);
+  render(); doFind(); toast(`Replaced ${cnt} instance(s)`,'ok');
+}
+document.getElementById('fq').addEventListener('keydown',e=>{ if(e.key==='Enter') findNav(e.shiftKey?-1:1); if(e.key==='Escape') closeFind(); });
+
+/* ════════════════════════════════════════════════════════════════
+   EXPORT ENGINE v3 — LaTeX/Mermaid safe pipeline
+   ════════════════════════════════════════════════════════════════ */
+
+function fname(){ const f=files.find(f=>f.id===aid); return (f?f.name:'document').replace('.md',''); }
+
+/* ── Escape helper */
+function escHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ────────────────────────────────────────
+   PROTECT → PARSE → RESTORE pipeline
+   (from friend's engine, adapted for KaTeX)
+   Extracts LaTeX & Mermaid BEFORE marked.js
+   so markdown doesn't mangle special chars
+   ──────────────────────────────────────── */
+function protectBlocks(text){
+  const phs = [];
+  let ctr = 0;
+  function ph(content){ const id=`%%PB_${ctr++}%%`; phs.push({id,content}); return id; }
+
+  // 1. Fenced mermaid
+  text = text.replace(/```mermaid\s*\n([\s\S]*?)```/gi, (m,code) => ph({type:'mermaid',code:code.trim()}));
+  // 2. Display LaTeX $$...$$
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (m,latex) => ph({type:'latex-display',code:latex}));
+  // 3. Display LaTeX \[...\]
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (m,latex) => ph({type:'latex-display',code:latex}));
+  // 4. LaTeX environments \begin{...}...\end{...}
+  text = text.replace(/\\begin\{([a-zA-Z*]+)\}([\s\S]*?)\\end\{\1\}/g, (m,env,c) => ph({type:'latex-display',code:`\\begin{${env}}${c}\\end{${env}}`}));
+  // 5. Inline LaTeX $...$
+  text = text.replace(/\$([^\$\n]+?)\$/g, (m,latex) => ph({type:'latex-inline',code:latex}));
+  // 6. Inline LaTeX \(...\)
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (m,latex) => ph({type:'latex-inline',code:latex}));
+  // 7. Other fenced code blocks
+  text = text.replace(/```(\w*)\s*\n([\s\S]*?)```/g, (m,lang,code) => ph({type:'code',lang,code}));
+
+  return {text, phs};
+}
+
+function restoreBlocksForExport(html, phs, mode){
+  // mode: 'html' | 'docx'
+  for(const {id, content} of phs){
+    let rep = '';
+    if(content.type === 'mermaid'){
+      if(mode === 'docx'){
+        rep = `<p style="background:#f5f5f5;padding:12px;border:1px solid #ddd;border-radius:6px;font-family:Consolas,monospace;font-size:9pt;white-space:pre-wrap;color:#555;"><em>[Mermaid Diagram]</em><br/>${escHtml(content.code)}</p>`;
+      } else {
+        rep = `<div class="mermaid" style="background:#fff;border-radius:8px;padding:20px;text-align:center;margin:1em 0;border:1px solid #ddd;">${escHtml(content.code)}</div>`;
+      }
+    } else if(content.type === 'latex-display'){
+      if(mode === 'docx'){
+        // Render KaTeX to static HTML for DOCX
+        try {
+          rep = '<div style="text-align:center;margin:12px 0;font-size:14pt;">' +
+                katex.renderToString(content.code, {displayMode:true, throwOnError:false, output:'html'}) +
+                '</div>';
+        } catch(e){
+          rep = `<p style="text-align:center;font-style:italic;color:#555;">$$${escHtml(content.code)}$$</p>`;
+        }
+      } else {
+        rep = `<div class="katex-display-export">$$${content.code}$$</div>`;
+      }
+    } else if(content.type === 'latex-inline'){
+      if(mode === 'docx'){
+        try {
+          rep = katex.renderToString(content.code, {displayMode:false, throwOnError:false, output:'html'});
+        } catch(e){
+          rep = `<span style="font-style:italic;">$${escHtml(content.code)}$</span>`;
+        }
+      } else {
+        rep = `$${content.code}$`;
+      }
+    } else if(content.type === 'code'){
+      const safe = escHtml(content.code);
+      rep = `<pre style="background:#f8f9fa;border:1px solid #e5e7eb;border-left:3px solid #4f46e5;border-radius:6px;padding:12px 16px;font-family:Consolas,'Courier New',monospace;font-size:9pt;white-space:pre-wrap;word-break:break-word;margin:1em 0;"><code>${safe}</code></pre>`;
+    }
+    html = html.split(id).join(rep);
+  }
+  return html;
+}
+
+/* Build clean export HTML from raw markdown */
+function buildCleanHTML(markdownText, mode){
+  // Step 1: protect LaTeX & Mermaid
+  const {text: safeText, phs} = protectBlocks(markdownText);
+
+  // Step 2: parse markdown with clean renderer
+  const r = new marked.Renderer();
+  r.heading = (text,level) => `<h${level}>${text}</h${level}>\n`;
+  r.code = (code,lang) => {
+    const safe = escHtml(code);
+    return `<pre style="background:#f8f9fa;border:1px solid #e5e7eb;border-left:3px solid #4f46e5;border-radius:6px;padding:12px 16px;font-family:Consolas,'Courier New',monospace;font-size:9pt;white-space:pre-wrap;word-break:break-word;margin:1em 0;"><code>${safe}</code></pre>\n`;
+  };
+  r.table = (header,body) =>
+    `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:1em 0;">`+
+    `<thead>${header}</thead><tbody>${body}</tbody></table>\n`;
+  r.tablerow = content => `<tr>${content}</tr>\n`;
+  r.tablecell = (content, {header, align}) => {
+    const tag = header ? 'th' : 'td';
+    const st = align ? ` style="text-align:${align}"` : '';
+    return `<${tag}${st}>${content}</${tag}>`;
+  };
+
+  let html = marked.parse(safeText, {renderer:r, gfm:true, breaks:false, headerIds:false});
+
+  // Step 3: restore protected blocks
+  html = restoreBlocksForExport(html, phs, mode);
+
+  return html;
+}
+
+/* ── DOCX CSS */
+function getDocxCSS(){
+  return `
+    body{font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:11pt;line-height:1.65;color:#1a1a2e;margin:0;padding:0;}
+    h1{font-size:24pt;font-weight:bold;color:#1e3a5f;border-bottom:2pt solid #4f46e5;padding-bottom:4pt;margin:0 0 12pt;}
+    h2{font-size:18pt;font-weight:bold;color:#1e3a5f;margin:16pt 0 8pt;}
+    h3{font-size:14pt;font-weight:bold;color:#4f46e5;margin:12pt 0 6pt;}
+    h4,h5,h6{font-size:12pt;font-weight:bold;color:#374151;margin:10pt 0 4pt;}
+    p{margin:6pt 0 8pt;}
+    strong{font-weight:bold;}em{font-style:italic;}
+    del{text-decoration:line-through;color:#6b7280;}
+    mark{background:#fef08a;padding:0 2pt;}
+    a{color:#4f46e5;text-decoration:underline;}
+    code{font-family:Consolas,"Courier New",monospace;font-size:9.5pt;background:#f3f4f6;color:#047857;padding:1pt 4pt;}
+    pre{font-family:Consolas,"Courier New",monospace;font-size:9pt;background:#f8f9fa;color:#1f2937;border-left:3pt solid #4f46e5;border:1pt solid #e5e7eb;border-left-width:3pt;padding:10pt 14pt;margin:10pt 0;white-space:pre-wrap;word-break:break-word;}
+    pre code{background:none;padding:0;color:inherit;font-size:inherit;}
+    blockquote{border-left:3pt solid #4f46e5;margin:10pt 0;padding:6pt 12pt;background:#f5f3ff;color:#4b5563;font-style:italic;}
+    ul,ol{margin:6pt 0 8pt 20pt;padding-left:14pt;}
+    li{margin:3pt 0;}
+    table{border-collapse:collapse;width:100%;margin:10pt 0;font-size:10.5pt;}
+    th{background:#4f46e5;color:#ffffff;font-weight:bold;padding:7pt 10pt;text-align:left;border:1pt solid #c7d2fe;}
+    td{padding:6pt 10pt;border:1pt solid #e5e7eb;vertical-align:top;}
+    tr:nth-child(even) td{background:#f9fafb;}
+    hr{border:none;border-top:1pt solid #e5e7eb;margin:14pt 0;}
+    img{max-width:100%;}
+    .katex{font-size:1.1em;}
+    .footnotes{border-top:1pt solid #e5e7eb;margin-top:18pt;padding-top:8pt;font-size:9pt;color:#6b7280;}
+  `;
+}
+
+/* ════ DOCX EXPORT — real .docx via html-docx-js ══════ */
+function exportWord(){
+  if(typeof htmlDocx === 'undefined'){
+    toast('html-docx-js not loaded — check network','err'); return;
+  }
+  try {
+    const markdownText = ed.value;
+    if(!markdownText.trim()){ toast('Editor is empty','err'); return; }
+    toast('Generating DOCX…','info');
+
+    const bodyHTML = buildCleanHTML(markdownText, 'docx');
+
+    const fullHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>${getDocxCSS()}</style></head><body>${bodyHTML}</body></html>`;
+
+    const docxBlob = htmlDocx.asBlob(fullHTML, {
+      orientation:'portrait',
+      margins:{top:1440,right:1080,bottom:1440,left:1080,header:720,footer:720,gutter:0}
+    });
+
+    const filename = fname() + '.docx';
+    saveAs(docxBlob, filename);
+    toast('✓ ' + filename + ' downloaded','ok');
+  } catch(err){
+    console.error('[DOCX] Export error:', err);
+    toast('DOCX export failed — see console','err');
+  }
+}
+
+/* ════ PDF EXPORT — html2canvas + jsPDF ═══════════════ */
+async function exportPDF(){
+  if(typeof html2canvas === 'undefined' || typeof jspdf === 'undefined'){
+    // Fallback to print dialog
+    const w = window.open('','_blank');
+    if(!w){toast('Pop-up blocked','err');return;}
+    w.document.write(buildFullExportHTML());
+    w.document.close();
+    w.onload=()=>setTimeout(()=>w.print(),400);
+    toast('Print dialog opened (fallback)','info');
+    return;
+  }
+
+  toast('Generating PDF…','info');
+
+  const bodyHTML = buildCleanHTML(ed.value, 'html');
+
+  // Create off-screen render container
+  const tempDiv = document.createElement('div');
+  tempDiv.style.cssText = `position:fixed;left:-9999px;top:0;width:800px;padding:40px;background:white;color:black;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12pt;line-height:1.7;`;
+  tempDiv.innerHTML = bodyHTML;
+
+  // Style overrides for white-bg PDF
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    *{color:black !important;}
+    h1,h2,h3,h4,h5,h6{color:#1a1a2e !important;}
+    pre{background:#f5f5f5 !important;border:1px solid #ddd !important;}
+    code{color:#c7254e !important;background:#f9f2f4 !important;}
+    pre code{color:#333 !important;background:transparent !important;}
+    blockquote{border-left-color:#4f46e5 !important;color:#555 !important;}
+    th{background:#f0f0f0 !important;color:#000 !important;}
+    th,td{border-color:#ccc !important;}
+    a{color:#4f46e5 !important;}
+  `;
+  tempDiv.appendChild(styleEl);
+
+  // Render KaTeX in the temp element
+  if(window._katexReady && typeof renderMathInElement === 'function'){
+    try {
+      renderMathInElement(tempDiv,{
+        delimiters:[
+          {left:'$$',right:'$$',display:true},
+          {left:'$',right:'$',display:false},
+          {left:'\\[',right:'\\]',display:true},
+          {left:'\\(',right:'\\)',display:false}
+        ],
+        throwOnError:false
+      });
+    } catch(e){ console.warn('KaTeX render for PDF failed:', e); }
+  }
+
+  // Render Mermaid in temp element
+  const mermaidEls = tempDiv.querySelectorAll('.mermaid');
+  for(const mel of mermaidEls){
+    try {
+      const code = mel.textContent;
+      const id = 'pdf-mermaid-' + Math.random().toString(36).substr(2,8);
+      const {svg} = await mermaid.render(id, code);
+      mel.innerHTML = svg;
+      mel.style.background = '#fff';
+    } catch(e){
+      mel.innerHTML = '<em style="color:#999;">[Diagram render error]</em>';
+    }
+  }
+
+  document.body.appendChild(tempDiv);
+
+  try {
+    const canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 800,
+      windowWidth: 800
+    });
+
+    const {jsPDF} = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentW = pageW - 2*margin;
+    const imgH = (canvas.height * contentW) / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+
+    let heightLeft = imgH;
+    let position = margin;
+
+    pdf.addImage(imgData,'PNG',margin,position,contentW,imgH);
+    heightLeft -= (pageH - 2*margin);
+
+    while(heightLeft > 0){
+      position = position - (pageH - 2*margin);
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',margin,position,contentW,imgH);
+      heightLeft -= (pageH - 2*margin);
+    }
+
+    pdf.save(fname()+'.pdf');
+    toast('✓ PDF downloaded','ok');
+  } catch(err){
+    console.error('[PDF] Export error:', err);
+    toast('PDF export failed — see console','err');
+  } finally {
+    document.body.removeChild(tempDiv);
+  }
+}
+
+/* ════ HTML EXPORT ═════════════════════════════════ */
+function buildFullExportHTML(opts={}){
+  const {dark=false} = opts;
+  const clone = pv.cloneNode(true);
+  clone.querySelectorAll('.cc').forEach(el=>el.remove());
+  const bg = dark ? '#0d0d12' : '#ffffff';
+  const fg = dark ? '#e2e2ee' : '#1a1a2e';
+  const exportCSS=`
+    body{font-family:Georgia,serif;font-size:15px;line-height:1.75;color:${fg};
+      max-width:820px;margin:40px auto;padding:0 20px;background:${bg};}
+    h1{font-size:2em;font-weight:800;border-bottom:2px solid #4f46e5;padding-bottom:.3em;margin:0 0 .5em;}
+    h2{font-size:1.45em;font-weight:700;margin:1.4em 0 .4em;color:${dark?'#e2e2ee':'#1e3a5f'};}
+    h3{font-size:1.15em;font-weight:700;color:#4f46e5;margin:1.1em 0 .3em;}
+    h4,h5,h6{font-weight:700;margin:.9em 0 .25em;}
+    p{margin:.6em 0 .9em;}a{color:#4f46e5;}strong{font-weight:700;}em{font-style:italic;}
+    code{font-family:Consolas,monospace;font-size:.87em;background:${dark?'#1e1e28':'#f3f4f6'};
+      color:${dark?'#34d399':'#047857'};padding:2px 5px;border-radius:3px;}
+    pre{background:${dark?'#0a0a10':'#f8f9fa'};border-left:4px solid #4f46e5;
+      padding:12px 16px;border-radius:4px;font-family:Consolas,monospace;
+      font-size:.87em;white-space:pre-wrap;margin:1em 0;border:1px solid ${dark?'#2e2e3d':'#e5e7eb'};}
+    pre code{background:none;padding:0;color:inherit;}
+    blockquote{border-left:3px solid #4f46e5;padding:.4em 1em;margin:1em 0;
+      background:${dark?'rgba(167,139,250,.08)':'#f5f3ff'};color:${dark?'#a0a0b8':'#555'};font-style:italic;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;}
+    th{background:#4f46e5;color:#fff;font-weight:bold;padding:8px 12px;text-align:left;border:1px solid #c7d2fe;}
+    td{padding:7px 12px;border:1px solid ${dark?'#2e2e3d':'#e5e7eb'};}
+    tr:nth-child(even) td{background:${dark?'rgba(255,255,255,.03)':'#f9fafb'};}
+    hr{border:none;border-top:1px solid ${dark?'#2e2e3d':'#e5e7eb'};margin:1.5em 0;}
+    img{max-width:100%;border-radius:6px;}
+    .footnotes{border-top:1px solid ${dark?'#2e2e3d':'#e5e7eb'};margin-top:2em;padding-top:1em;font-size:.88em;}
+  `;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+    <title>${fname()}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+    <style>${exportCSS}</style></head><body>${clone.innerHTML}</body></html>`;
+}
+
+function exportHTML(){
+  const blob=new Blob([buildFullExportHTML()],{type:'text/html'});
+  saveAs(blob,fname()+'.html');
+  toast('HTML exported','ok');
+}
+
+function exportMD(){
+  const blob=new Blob([ed.value],{type:'text/markdown'});
+  saveAs(blob,fname()+'.md');
+  toast('Markdown exported','ok');
+}
+
+/* ════ MISC UI ══════════════════════════════════ */
+function toast(msg,type='info'){
+  const t=document.getElementById('tst');
+  t.textContent=msg; t.className='show '+(type||'');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='',2400);
+}
+function openM(id){ document.getElementById(id).classList.add('open'); }
+function closeM(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('open'); }));
+
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  const on=document.body.classList.contains('light');
+  document.getElementById('bthm').textContent=on?'🌙 Theme':'☀ Theme';
+  document.getElementById('hljs-theme').href=on
+    ?'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css'
+    :'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
+  localStorage.setItem('mf2-theme',on?'light':'dark');
+}
+function toggleWrap(){
+  document.body.classList.toggle('nowrap');
+  document.getElementById('bwrp').classList.toggle('on',!document.body.classList.contains('nowrap'));
+}
+function toggleFocus(){
+  document.body.classList.toggle('focus');
+  document.getElementById('bfcs').classList.toggle('on',document.body.classList.contains('focus'));
+}
+function toggleRead(){
+  document.body.classList.toggle('reading');
+  document.getElementById('brd').classList.toggle('on',document.body.classList.contains('reading'));
+}
+function toggleWC(){
+  document.getElementById('wcp').classList.toggle('open');
+  document.getElementById('bwc').classList.toggle('on',document.getElementById('wcp').classList.contains('open'));
+}
+document.addEventListener('click',e=>{
+  if(!document.getElementById('wcp').contains(e.target)&&e.target.id!=='bwc')
+    document.getElementById('wcp').classList.remove('open');
+});
+
+/* ════ SHORTCUTS ════════════════════════════════ */
+const SHORTCUTS=[
+  ['Ctrl+B','Bold'],['Ctrl+I','Italic'],['Ctrl+`','Inline code'],
+  ['Ctrl+K','Insert link'],['Ctrl+S','Save (auto)'],['Ctrl+F','Find & Replace'],
+  ['Ctrl+/','Toggle comment'],['Ctrl+Z','Undo'],['Ctrl+Y','Redo'],
+  ['Tab','Indent'],['Shift+Tab','Unindent'],['Ctrl+Enter','New paragraph'],
+];
+function openShortcuts(){
+  document.getElementById('scg').innerHTML=SHORTCUTS.map(([k,d])=>
+    `<div class="scr"><span class="scd">${d}</span><span class="sck">${k}</span></div>`
+  ).join('');
+  openM('msc');
+}
+
+/* ════ KEYBOARD SHORTCUTS ═══════════════════════ */
+document.addEventListener('keydown',e=>{
+  const ctrl=e.ctrlKey||e.metaKey;
+  if(ctrl&&e.key==='b'){e.preventDefault();wrap('**','**');}
+  if(ctrl&&e.key==='i'){e.preventDefault();wrap('*','*');}
+  if(ctrl&&e.key==='`'){e.preventDefault();wrap('`','`');}
+  if(ctrl&&e.key==='k'){e.preventDefault();insertLink();}
+  if(ctrl&&e.key==='f'){e.preventDefault();openFind();}
+  if(e.key==='Escape'){ closeFind(); document.querySelectorAll('.ov.open').forEach(o=>o.classList.remove('open')); }
+  if(e.key==='Tab'&&document.activeElement===ed){
+    e.preventDefault();
+    const s=ed.selectionStart;
+    ed.setRangeText('  ',s,s,'end');
+    render();
+  }
+});
+
+/* ════ DRAG DIVIDER ═════════════════════════════ */
+(function(){
+  const db=document.getElementById('divbar');
+  const work=document.getElementById('work');
+  let dragging=false,startX,startW;
+  db.addEventListener('mousedown',e=>{
+    dragging=true; startX=e.clientX;
+    startW=document.getElementById('ep').offsetWidth;
+    db.classList.add('drag'); e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const dx=e.clientX-startX;
+    const tw=work.offsetWidth;
+    const nw=Math.max(120,Math.min(tw-120,startW+dx));
+    document.getElementById('ep').style.flex='none';
+    document.getElementById('ep').style.width=nw+'px';
+  });
+  document.addEventListener('mouseup',()=>{ dragging=false; db.classList.remove('drag'); });
+})();
+
+/* ════ SIDEBAR TOGGLE ═══════════════════════════ */
+function toggleSidebar(){
+  const sb=document.getElementById('sb');
+  const arr=document.querySelector('#sb-toggle .arr');
+  sb.classList.toggle('hide');
+  arr.textContent=sb.classList.contains('hide')?'›':'‹';
+}
+
+/* ════ TOOLTIP ══════════════════════════════════ */
+const tip=document.getElementById('tip');
+document.querySelectorAll('[data-t]').forEach(el=>{
+  el.addEventListener('mouseenter',e=>{
+    tip.textContent=el.dataset.t;
+    const r=el.getBoundingClientRect();
+    tip.style.left=r.left+'px';
+    tip.style.top=(r.bottom+6)+'px';
+    tip.classList.add('show');
+  });
+  el.addEventListener('mouseleave',()=>tip.classList.remove('show'));
+});
+
+/* ════ DEMO CONTENT ═════════════════════════════ */
+function DEMO(){
+  return `# MarkFlow v2 — Demo
+
+Welcome to **MarkFlow**, a power Markdown editor that runs entirely in your browser.
+
+## Features
+
+- ✅ Live split preview
+- ✅ Syntax highlighting (highlight.js)
+- ✅ Math via KaTeX
+- ✅ Diagrams via Mermaid
+- ✅ Export to **.docx**, .pdf, .html, .md
+- ✅ Multi-file sidebar
+- ✅ Find & Replace
+
+## Formatting
+
+**Bold**, *italic*, ~~strikethrough~~, \`inline code\`, ==highlight==, [links](https://example.com)
+
+## Code Block
+
+\`\`\`javascript
+function greet(name) {
+  return \\\`Hello, \\\${name}!\\\`;
+}
+console.log(greet('World'));
+\`\`\`
+
+## Table
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| DOCX export | ✅ Fixed | LaTeX preserved |
+| PDF export  | ✅ Works | html2canvas + jsPDF |
+| HTML export | ✅ Works | Self-contained |
+
+## Math
+
+Inline: $E = mc^2$
+
+Block:
+$$
+\\int_0^\\infty e^{-x}\\,dx = 1
+$$
+
+## Blockquote
+
+> "The best tool is the one that gets out of your way." — Unknown
+
+## Task List
+
+- [x] Fix DOCX engine with LaTeX support
+- [x] Fix bold toggle (unwrap)
+- [x] Real PDF export with jsPDF
+- [ ] Add image drag-and-drop
+
+## Mermaid Diagram
+
+\`\`\`mermaid
+graph TD
+  A[Start] --> B{Choice}
+  B -- Yes --> C[OK]
+  B -- No --> D[No]
+\`\`\`
+
+---
+
+*Happy writing!* 🚀
+`;
+}
+
+/* ════ INIT ═════════════════════════════════════ */
+(function init(){
+  // Restore theme
+  if(localStorage.getItem('mf2-theme')==='light') toggleTheme();
+
+  // Load active file into editor
+  const f=files.find(f=>f.id===aid);
+  if(f){ ed.value=f.content; document.getElementById('stf').textContent=f.name; }
+
+  // Initial render
+  render();
+  renderFL();
+
+  // Mermaid init
+  mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
+})();
+</script>
+</body>
+</html>
