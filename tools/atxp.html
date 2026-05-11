@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkdownPro - Advanced Markdown Editor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.0.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            border-bottom: 1px solid #3d3d5c;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .header-title i {
+            font-size: 1.8rem;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Toolbar Buttons */
+        .toolbar-group {
+            display: flex;
+            gap: 0.25rem;
+            background: #2d2d44;
+            border-radius: 6px;
+            padding: 0.5rem;
+            border: 1px solid #3d3d5c;
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: none;
+            color: #a0a0c0;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .toolbar-btn:hover {
+            background: #3d3d5c;
+            color: #00d4ff;
+        }
+
+        .toolbar-btn.active {
+            background: #00d4ff;
+            color: #1e1e2e;
+        }
+
+        .export-btn {
+            background: #00d4ff;
+            color: #1e1e2e;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #00b8d4;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .editor-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 1px;
+            background: #3d3d5c;
+        }
+
+        .editor-pane, .preview-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e2e;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            background: #2d2d44;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #3d3d5c;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #00d4ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Editor Textarea */
+        #markdown-input {
+            flex: 1;
+            padding: 1.5rem;
+            background: #1e1e2e;
+            color: #e0e0e0;
+            border: none;
+            resize: none;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            outline: none;
+            overflow-y: auto;
+        }
+
+        /* Preview */
+        #preview {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: #1e1e2e;
+        }
+
+        /* Markdown Styling */
+        #preview h1 {
+            font-size: 2rem;
+            margin: 1.5rem 0 1rem;
+            color: #00d4ff;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 0.5rem;
+        }
+
+        #preview h2 {
+            font-size: 1.6rem;
+            margin: 1.3rem 0 0.8rem;
+            color: #00e5ff;
+        }
+
+        #preview h3 {
+            font-size: 1.3rem;
+            margin: 1rem 0 0.6rem;
+            color: #00d4ff;
+        }
+
+        #preview h4, #preview h5, #preview h6 {
+            color: #a0d4ff;
+            margin: 0.8rem 0 0.4rem;
+        }
+
+        #preview p {
+            margin: 0.8rem 0;
+            line-height: 1.8;
+        }
+
+        #preview a {
+            color: #00d4ff;
+            text-decoration: none;
+            border-bottom: 1px dotted #00d4ff;
+            transition: all 0.2s;
+        }
+
+        #preview a:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-bottom: 1px solid #00d4ff;
+        }
+
+        #preview code {
+            background: #2d2d44;
+            color: #00ff88;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        #preview pre {
+            background: #0f0f1e;
+            border-left: 3px solid #00d4ff;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        #preview pre code {
+            background: transparent;
+            color: #00ff88;
+            padding: 0;
+        }
+
+        #preview blockquote {
+            border-left: 4px solid #00d4ff;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #b0b0d0;
+            font-style: italic;
+        }
+
+        #preview ul, #preview ol {
+            margin: 1rem 0 1rem 2rem;
+        }
+
+        #preview li {
+            margin: 0.4rem 0;
+        }
+
+        #preview table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        #preview table th {
+            background: #2d2d44;
+            color: #00d4ff;
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 2px solid #00d4ff;
+        }
+
+        #preview table td {
+            padding: 0.8rem;
+            border-bottom: 1px solid #3d3d5c;
+        }
+
+        #preview table tr:hover {
+            background: #2d2d44;
+        }
+
+        /* Scrollbar */
+        #markdown-input::-webkit-scrollbar,
+        #preview::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #markdown-input::-webkit-scrollbar-track,
+        #preview::-webkit-scrollbar-track {
+            background: #1e1e2e;
+        }
+
+        #markdown-input::-webkit-scrollbar-thumb,
+        #preview::-webkit-scrollbar-thumb {
+            background: #3d3d5c;
+            border-radius: 4px;
+        }
+
+        #markdown-input::-webkit-scrollbar-thumb:hover,
+        #preview::-webkit-scrollbar-thumb:hover {
+            background: #00d4ff;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d2d44;
+            border: 1px solid #3d3d5c;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0a0c0;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1e1e2e;
+            border: 1px solid #3d3d5c;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #00d4ff;
+            color: #1e1e2e;
+        }
+
+        .btn-primary:hover {
+            background: #00b8d4;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #a0a0c0;
+            border: 1px solid #3d3d5c;
+        }
+
+        .btn-secondary:hover {
+            background: #2d2d44;
+        }
+
+        /* Dropdown Menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: #2d2d44;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border: 1px solid #3d3d5c;
+            border-radius: 6px;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+        }
+
+        .dropdown-content a, .dropdown-content button {
+            color: #e0e0e0;
+            padding: 0.8rem 1.2rem;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            text-align: left;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dropdown-content a:hover, .dropdown-content button:hover {
+            background: #3d3d5c;
+            color: #00d4ff;
+        }
+
+        .dropdown-content a:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .dropdown-content a:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .dropdown.active .dropdown-content {
+            display: block;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #a0a0c0;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .editor-container {
+                flex-direction: column;
+            }
+
+            .editor-pane, .preview-pane {
+                height: 50%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                gap: 0.25rem;
+            }
+
+            .toolbar-btn {
+                padding: 0.4rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            #markdown-input, #preview {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .notification {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: #00d4ff;
+            color: #1e1e2e;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+            animation: slideIn 0.3s ease-out;
+            z-index: 999;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-markdown"></i>
+                MarkdownPro
+            </div>
+            <div class="toolbar">
+                <!-- Formatting Tools -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="insertMarkdown('# ', ' ')" title="Heading 1"><i class="fas fa-heading"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('**', '**')" title="Bold"><i class="fas fa-bold"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('*', '*')" title="Italic"><i class="fas fa-italic"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('~~', '~~')" title="Strikethrough"><i class="fas fa-strikethrough"></i></button>
+                </div>
+
+                <!-- Code Tools -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="insertMarkdown('`', '`')" title="Inline Code"><i class="fas fa-code"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('```\n', '\n```')" title="Code Block"><i class="fas fa-cube"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('```js\n', '\n```')" title="Code Block JS"><span style="font-size: 0.8rem;">JS</span></button>
+                </div>
+
+                <!-- List Tools -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="insertMarkdown('- ', '')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('1. ', '')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('> ', '')" title="Blockquote"><i class="fas fa-quote-left"></i></button>
+                </div>
+
+                <!-- Special Elements -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="insertMarkdown('[', '](url)')" title="Link"><i class="fas fa-link"></i></button>
+                    <button class="toolbar-btn" onclick="insertMarkdown('![', '](url)')" title="Image"><i class="fas fa-image"></i></button>
+                    <button class="toolbar-btn" onclick="insertTable()" title="Table"><i class="fas fa-table"></i></button>
+                </div>
+
+                <!-- Export -->
+                <div class="toolbar-group" style="margin-left: auto;">
+                    <div class="dropdown">
+                        <button class="export-btn" onclick="toggleDropdown(event)">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <div class="dropdown-content">
+                            <button onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <button onclick="exportWord()"><i class="fas fa-file-word"></i> Word (.docx)</button>
+                            <button onclick="exportHTML()"><i class="fas fa-file-code"></i> HTML</button>
+                            <button onclick="exportMarkdown()"><i class="fas fa-file-alt"></i> Markdown</button>
+                        </div>
+                    </div>
+                    <button class="export-btn" onclick="resetEditor()" title="New Document"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Container -->
+        <div class="editor-container">
+            <!-- Editor Pane -->
+            <div class="editor-pane">
+                <div class="pane-header">
+                    <span><i class="fas fa-edit"></i> Markdown</span>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <i class="fas fa-file-lines"></i>
+                            <span id="line-count">0</span> lines
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-keyboard"></i>
+                            <span id="char-count">0</span> chars
+                        </div>
+                    </div>
+                </div>
+                <textarea id="markdown-input" placeholder="Enter your markdown here... Start with # for headings, ** for bold, etc."></textarea>
+            </div>
+
+            <!-- Preview Pane -->
+            <div class="preview-pane">
+                <div class="pane-header">
+                    <span><i class="fas fa-eye"></i> Preview</span>
+                </div>
+                <div id="preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Settings</span>
+                <button class="close-btn" onclick="closeModal('settingsModal')">×</button>
+            </div>
+            <div class="form-group">
+                <label>Document Title</label>
+                <input type="text" id="docTitle" placeholder="My Document" value="My Document">
+            </div>
+            <div class="form-group">
+                <label>Author Name</label>
+                <input type="text" id="docAuthor" placeholder="John Doe">
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" onclick="closeModal('settingsModal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize marked
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+        });
+
+        // Elements
+        const textarea = document.getElementById('markdown-input');
+        const preview = document.getElementById('preview');
+        const lineCount = document.getElementById('line-count');
+        const charCount = document.getElementById('char-count');
+
+        // Local Storage
+        const STORAGE_KEY = 'markdown-content';
+        const SETTINGS_KEY = 'markdown-settings';
+
+        // Load from localStorage
+        function loadContent() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) textarea.value = saved;
+            updatePreview();
+            updateStats();
+        }
+
+        // Save to localStorage
+        function saveContent() {
+            localStorage.setItem(STORAGE_KEY, textarea.value);
+        }
+
+        // Update Preview
+        function updatePreview() {
+            const html = marked(textarea.value);
+            preview.innerHTML = html;
+            saveContent();
+        }
+
+        // Update Stats
+        function updateStats() {
+            const lines = textarea.value.split('\n').length;
+            const chars = textarea.value.length;
+            lineCount.textContent = lines;
+            charCount.textContent = chars;
+        }
+
+        // Insert Markdown
+        function insertMarkdown(before, after) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selected = textarea.value.substring(start, end);
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + before + selected + after + text.substring(end);
+            textarea.focus();
+            textarea.selectionStart = start + before.length;
+            
+            updatePreview();
+            updateStats();
+        }
+
+        // Insert Table
+        function insertTable() {
+            const table = `
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Cell 1   | Cell 2   | Cell 3   |
+| Cell 4   | Cell 5   | Cell 6   |
+`;
+            const start = textarea.selectionStart;
+            textarea.value = textarea.value.substring(0, start) + table + textarea.value.substring(start);
+            updatePreview();
+            updateStats();
+        }
+
+        // Export Functions
+        async function exportPDF() {
+            const doc = document.createElement('div');
+            doc.innerHTML = preview.innerHTML;
+            doc.style.padding = '2rem';
+            doc.style.background = 'white';
+            doc.style.color = 'black';
+
+            const opt = {
+                margin: 10,
+                filename: (document.getElementById('docTitle').value || 'document') + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            };
+
+            html2pdf().set(opt).from(doc).save();
+            showNotification('PDF exported successfully!');
+        }
+
+        async function exportWord() {
+            try {
+                const content = preview.innerHTML;
+                const docContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 1in; }
+                            h1 { color: #0066cc; border-bottom: 2px solid #0066cc; }
+                            h2 { color: #0066cc; margin-top: 1em; }
+                            code { background: #f0f0f0; padding: 2px 5px; font-family: monospace; }
+                            pre { background: #f0f0f0; padding: 1em; overflow-x: auto; }
+                            blockquote { border-left: 4px solid #0066cc; padding-left: 1em; margin-left: 0; }
+                            table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+                            table th { background: #0066cc; color: white; padding: 0.5em; text-align: left; }
+                            table td { border: 1px solid #ddd; padding: 0.5em; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${document.getElementById('docTitle').value || 'Document'}</h1>
+                        ${content}
+                    </body>
+                    </html>
+                `;
+
+                const blob = new Blob([docContent], { type: 'application/msword' });
+                downloadFile(blob, (document.getElementById('docTitle').value || 'document') + '.doc');
+                showNotification('Word document exported successfully!');
+            } catch (error) {
+                showNotification('Error exporting Word document!');
+            }
+        }
+
+        function exportHTML() {
+            const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${document.getElementById('docTitle').value || 'Document'}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; background: #f5f5f5; color: #333; }
+        h1 { color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 0.5em; margin: 1.5em 0 0.5em; }
+        h2 { color: #0066cc; margin: 1.3em 0 0.5em; }
+        h3 { color: #0066cc; margin: 1em 0 0.5em; }
+        code { background: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 0.9em; }
+        pre { background: #f0f0f0; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; border-left: 3px solid #0066cc; }
+        pre code { background: transparent; padding: 0; }
+        blockquote { border-left: 4px solid #0066cc; padding-left: 1em; margin: 1em 0; color: #666; font-style: italic; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+        table th { background: #0066cc; color: white; padding: 0.8em; text-align: left; }
+        table td { border: 1px solid #ddd; padding: 0.8em; }
+        table tr:nth-child(even) { background: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>${document.getElementById('docTitle').value || 'Document'}</h1>
+    ${preview.innerHTML}
+</body>
+</html>`;
+            
+            downloadFile(new Blob([html], { type: 'text/html' }), (document.getElementById('docTitle').value || 'document') + '.html');
+            showNotification('HTML exported successfully!');
+        }
+
+        function exportMarkdown() {
+            downloadFile(new Blob([textarea.value], { type: 'text/markdown' }), (document.getElementById('docTitle').value || 'document') + '.md');
+            showNotification('Markdown exported successfully!');
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleDropdown(e) {
+            e.target.closest('.dropdown').classList.toggle('active');
+        }
+
+        function resetEditor() {
+            if (confirm('Are you sure? This will clear all content.')) {
+                textarea.value = '';
+                updatePreview();
+                updateStats();
+                showNotification('Editor cleared!');
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Event Listeners
+        textarea.addEventListener('input', () => {
+            updatePreview();
+            updateStats();
+        });
+
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                insertMarkdown('    ', '');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+            }
+        });
+
+        // Load on startup
+        loadContent();
+
+        // Auto-save every 30 seconds
+        setInterval(saveContent, 30000);
+    </script>
+</body>
+</html>
